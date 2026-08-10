@@ -4,8 +4,7 @@ service cloud.firestore {
     match /{document=**} {
       // For now, allow read/write to authenticated users for simplicity
       // and read access to all for the catalog items.
-      allow read: if true;
-      allow write: if request.auth != null;
+      allow read, write: if true;
     }
   }
 }
