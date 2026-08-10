@@ -1,0 +1,22 @@
+[
+  { 
+    "id": "cust-1", 
+    "name": "JHOSSTYNN ADMIN", 
+    "email": "jhosstynn13@gmail.com", 
+    "phone": "999888777", 
+    "createdAt": 1714271700000, 
+    "totalOrders": 1, 
+    "totalSpent": 1250, 
+    "lastOrderDate": 1714271700000 
+  },
+  { 
+    "id": "cust-2", 
+    "name": "CLIENTE PREMIUM", 
+    "email": "vip@satoshimport.com", 
+    "phone": "999222333", 
+    "createdAt": 1714271700000, 
+    "totalOrders": 1, 
+    "totalSpent": 12500, 
+    "lastOrderDate": 1714271700000 
+  }
+]

@@ -1,0 +1,38 @@
+[
+  { 
+    "id": "user-1", 
+    "name": "JHOSSTYNN", 
+    "firstName": "JHOSSTYNN", 
+    "lastName": "ADMIN", 
+    "dni": "12345678", 
+    "phone": "999000111", 
+    "email": "jhosstynn13@gmail.com", 
+    "password": "admin", 
+    "role": "admin", 
+    "createdAt": 1714271700000 
+  },
+  { 
+    "id": "user-2", 
+    "name": "SATOSHI ADMIN", 
+    "firstName": "SATOSHI", 
+    "lastName": "MANAGER", 
+    "dni": "87654321", 
+    "phone": "999000222", 
+    "email": "IMPORTSATOSHI@HOTMAIL.COM", 
+    "password": "admin", 
+    "role": "admin", 
+    "createdAt": 1714271700000 
+  },
+  { 
+    "id": "user-3", 
+    "name": "STAFF SOPORTE", 
+    "firstName": "SOPORTE", 
+    "lastName": "SOPORTE", 
+    "dni": "11223344", 
+    "phone": "999000333", 
+    "email": "soporte@satoshimport.com", 
+    "password": "staff", 
+    "role": "staff", 
+    "createdAt": 1714271700000 
+  }
+]

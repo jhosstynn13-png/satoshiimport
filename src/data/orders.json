@@ -1,0 +1,27 @@
+[
+  { 
+    "id": "ord-101", 
+    "customerId": "cust-1", 
+    "customerName": "JHOSSTYNN ADMIN", 
+    "items": [{ "productId": "p-1", "name": "JORDAN 4 RETRO MILITARY BLUE", "quantity": 1, "price": 1250 }], 
+    "total": 1250, 
+    "status": "delivered", 
+    "paymentMethod": "transfer", 
+    "billingType": "boleta", 
+    "createdAt": 1714185300000, 
+    "updatedAt": 1714185300000 
+  },
+  { 
+    "id": "ord-102", 
+    "customerId": "cust-2", 
+    "customerName": "CLIENTE PREMIUM", 
+    "items": [{ "productId": "p-4", "name": "LV KEEPALL BANDOLIÈRE 55", "quantity": 1, "price": 12500 }], 
+    "total": 12500, 
+    "status": "shipped", 
+    "paymentMethod": "card", 
+    "billingType": "factura", 
+    "trackingNumber": "SAT-77221", 
+    "createdAt": 1714098900000, 
+    "updatedAt": 1714098900000 
+  }
+]

@@ -1,0 +1,231 @@
+[
+  {
+    "id": "cat-1",
+    "name": "CALZADO",
+    "subcategories": [
+      {
+        "id": "sub-1",
+        "name": "SNEAKERS LUXURY",
+        "models": [
+          {
+            "id": "mod-1",
+            "name": "JORDAN RETRO",
+            "products": [
+              {
+                "id": "p-1",
+                "name": "JORDAN 4 RETRO MILITARY BLUE",
+                "price": 1250,
+                "sku": "JD4-MB-01",
+                "image": "https://images.unsplash.com/photo-1597045566677-8cf032ed6634?auto=format&fit=crop&q=80&w=400",
+                "description": "Edición premium con materiales de primera calidad y colores clásicos.",
+                "createdAt": 1714271700000,
+                "sizes": ["40", "41", "42", "43", "44"],
+                "status": "active"
+              },
+              {
+                "id": "p-10",
+                "name": "JORDAN 1 RETRO HIGH OG",
+                "price": 950,
+                "sku": "JD1-OG-CH",
+                "image": "https://images.unsplash.com/photo-1552346154-21d328109a27?auto=format&fit=crop&q=80&w=400",
+                "description": "El inicio de todo. Cuero premium y silueta icónica.",
+                "createdAt": 1714275700000,
+                "sizes": ["41", "42", "44"],
+                "status": "active"
+              }
+            ]
+          },
+          {
+            "id": "mod-2",
+            "name": "YEEZY SERIES",
+            "products": [
+              {
+                "id": "p-2",
+                "name": "YEEZY BOOST 350 V2 BONE",
+                "price": 1100,
+                "sku": "YZY-350-B",
+                "image": "https://images.unsplash.com/photo-1600185365926-3a2ce3cdb9eb?auto=format&fit=crop&q=80&w=400",
+                "description": "Máximo confort con tecnología Boost y diseño vanguardista.",
+                "createdAt": 1714272700000,
+                "sizes": ["40", "41", "42", "43"],
+                "status": "active"
+              }
+            ]
+          },
+          {
+            "id": "mod-3",
+            "name": "NIKE DUNK",
+            "products": [
+              {
+                "id": "p-16",
+                "name": "NIKE DUNK LOW PANDA",
+                "price": 650,
+                "sku": "NK-DL-PN",
+                "image": "https://images.unsplash.com/photo-1606107557195-0e29a4b5b4aa?auto=format&fit=crop&q=80&w=400",
+                "description": "El colorway más versátil de la historia de Dunk.",
+                "createdAt": 1714268700000,
+                "sizes": ["38", "39", "40", "41", "42"],
+                "status": "active"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "sub-2",
+        "name": "RUNNING & PERFORMANCE",
+        "models": [
+          {
+            "id": "mod-5",
+            "name": "ON RUNNING",
+            "products": [
+              {
+                "id": "p-3",
+                "name": "ON CLOUDMONSTER",
+                "price": 850,
+                "sku": "ON-CM-BLK",
+                "image": "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&q=80&w=400",
+                "description": "Amortiguación masiva para recorridos largos.",
+                "createdAt": 1714273700000,
+                "sizes": ["40", "41", "42", "43"],
+                "status": "active"
+              }
+            ]
+          },
+          {
+            "id": "mod-6",
+            "name": "ADIDAS ULTRABOOST",
+            "products": [
+              {
+                "id": "p-11",
+                "name": "ADIDAS ULTRABOOST LIGHT",
+                "price": 780,
+                "sku": "AD-UB-LG",
+                "image": "https://images.unsplash.com/photo-1587563871167-1ee9c731aefb?auto=format&fit=crop&q=80&w=400",
+                "description": "La zapatilla de running más icónica de Adidas, ahora más ligera.",
+                "createdAt": 1714276200000,
+                "sizes": ["40", "41", "42", "43", "44"],
+                "status": "active"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "cat-2",
+    "name": "ACCESORIOS",
+    "subcategories": [
+      {
+        "id": "sub-4",
+        "name": "BOLSOS DE LUJO",
+        "models": [
+          {
+            "id": "mod-9",
+            "name": "LOUIS VUITTON",
+            "products": [
+              {
+                "id": "p-4",
+                "name": "LV KEEPALL BANDOLIÈRE 55",
+                "price": 12500,
+                "sku": "LV-KP-55",
+                "image": "https://images.unsplash.com/photo-1547949003-9792a18a2601?auto=format&fit=crop&q=80&w=400",
+                "description": "Bolso de viaje icónico en lona Monogram.",
+                "createdAt": 1714270700000,
+                "sizes": ["ONE SIZE"],
+                "status": "active"
+              }
+            ]
+          },
+          {
+            "id": "mod-10",
+            "name": "GUCCI",
+            "products": [
+              {
+                "id": "p-18",
+                "name": "GUCCI OPHIDIA SHOULDER BAG",
+                "price": 5800,
+                "sku": "GC-OPH-01",
+                "image": "https://images.unsplash.com/photo-1584917033904-4942ec46985d?auto=format&fit=crop&q=80&w=400",
+                "description": "Pieza clásica con la banda Web emblemática.",
+                "createdAt": 1714274700000,
+                "sizes": ["ONE SIZE"],
+                "status": "active"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "sub-5",
+        "name": "JOYERÍA & RELOJES",
+        "models": [
+          {
+            "id": "mod-11",
+            "name": "ROLEX",
+            "products": [
+              {
+                "id": "p-5",
+                "name": "ROLEX SUBMARINER DATE",
+                "price": 45000,
+                "sku": "RLX-SUB-BK",
+                "image": "https://images.unsplash.com/photo-1523170335258-f5ed11844a49?auto=format&fit=crop&q=80&w=400",
+                "description": "El reloj de buceo de referencia.",
+                "createdAt": 1714276600000,
+                "sizes": ["41MM"],
+                "status": "active"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "cat-3",
+    "name": "STREETWEAR",
+    "subcategories": [
+      {
+        "id": "sub-6",
+        "name": "TOPS",
+        "models": [
+          {
+            "id": "mod-12",
+            "name": "SUPREME",
+            "products": [
+              {
+                "id": "p-6",
+                "name": "SUPREME BOX LOGO HOODIE",
+                "price": 3200,
+                "sku": "SUP-BOGO-GR",
+                "image": "https://images.unsplash.com/photo-1556821840-3a63f95609a7?auto=format&fit=crop&q=80&w=400",
+                "description": "La prenda más codiciada del streetwear global.",
+                "createdAt": 1714276400000,
+                "sizes": ["S", "M", "L", "XL"],
+                "status": "active"
+              }
+            ]
+          },
+          {
+            "id": "mod-13",
+            "name": "OFF-WHITE",
+            "products": [
+              {
+                "id": "p-7",
+                "name": "OFF-WHITE ARROWS TEE",
+                "price": 1200,
+                "sku": "OW-ARW-WHT",
+                "image": "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&q=80&w=400",
+                "description": "Diseño icónico de Virgil Abloh.",
+                "createdAt": 1714274700000,
+                "sizes": ["S", "M", "L"],
+                "status": "active"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+]
