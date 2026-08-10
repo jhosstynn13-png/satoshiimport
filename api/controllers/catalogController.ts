@@ -1,11 +1,9 @@
 import { Request, Response } from 'express';
-import fs from 'fs';
-import path from 'path';
+import categoriesData from '../../src/data/categories.json';
 
 // In-memory data for demo purposes. Initialized from JSON.
-const dataPath = path.join(process.cwd(), 'src', 'data', 'categories.json');
 let catalogData = {
-  categories: JSON.parse(fs.readFileSync(dataPath, 'utf8'))
+  categories: categoriesData
 };
 
 export const getCatalog = (req: Request, res: Response) => {

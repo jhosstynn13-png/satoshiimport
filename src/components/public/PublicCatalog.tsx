@@ -10,6 +10,7 @@ export default function PublicCatalog({ catalog, initialCategoryName = null }: {
   const [activeCategory, setActiveCategory] = useState<string | null>(initialCategoryName);
   const [activeSubcategory, setActiveSubcategory] = useState<string | null>(null);
   const [activeModel, setActiveModel] = useState<string | null>(null);
+  const [activeSubmodel, setActiveSubmodel] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
   // Sync with initialCategoryName from Layout (Navbar clicks)
@@ -18,6 +19,7 @@ export default function PublicCatalog({ catalog, initialCategoryName = null }: {
       setActiveCategory(initialCategoryName);
       setActiveSubcategory(null);
       setActiveModel(null);
+      setActiveSubmodel(null);
     }
   }, [initialCategoryName]);
 
@@ -31,12 +33,17 @@ export default function PublicCatalog({ catalog, initialCategoryName = null }: {
       return (sub.models || []).flatMap((mod: any) => {
         if (activeModel && mod.name !== activeModel) return [];
         
-        return (mod.products || []).map((p: any) => ({
-          ...p,
-          categoryName: cat.name,
-          subcategoryName: sub.name,
-          modelName: mod.name
-        }));
+        return (mod.submodels || []).flatMap((smod: any) => {
+          if (activeSubmodel && smod.name !== activeSubmodel) return [];
+          
+          return (smod.products || []).map((p: any) => ({
+            ...p,
+            categoryName: cat.name,
+            subcategoryName: sub.name,
+            modelName: mod.name,
+            submodelName: smod.name
+          }));
+        });
       });
     });
   }).filter((p: any) => p && p.status === 'active');
@@ -45,19 +52,22 @@ export default function PublicCatalog({ catalog, initialCategoryName = null }: {
     const searchTerms = searchQuery.toLowerCase().split(' ').filter(t => t.length > 0);
     if (searchTerms.length === 0) return true;
 
-    const searchableText = `${p.name} ${p.sku} ${p.categoryName} ${p.subcategoryName} ${p.modelName}`.toLowerCase();
+    const searchableText = `${p.name} ${p.sku} ${p.categoryName} ${p.subcategoryName} ${p.modelName} ${p.submodelName}`.toLowerCase();
     return searchTerms.every(term => searchableText.includes(term));
   });
 
   const activeCategoryObj = categories?.find((c: any) => c.name === activeCategory);
   const subcategories = activeCategoryObj?.subcategories || [];
-  const activeSubcategoryObj = subcategories.find((s: any) => s.name === activeSubcategory);
+  const activeSubcategoryObj = subcategories?.find((s: any) => s.name === activeSubcategory);
   const models = activeSubcategoryObj?.models || [];
+  const activeModelObj = models?.find((m: any) => m.name === activeModel);
+  const submodels = activeModelObj?.submodels || [];
 
   const clearFilters = () => {
     setActiveCategory(null);
     setActiveSubcategory(null);
     setActiveModel(null);
+    setActiveSubmodel(null);
     setSearchQuery('');
   };
 
@@ -88,7 +98,13 @@ export default function PublicCatalog({ catalog, initialCategoryName = null }: {
                  {activeModel && (
                    <>
                      <ChevronRight size={8} className="text-white/20" />
-                     <span className="text-[8px] font-black uppercase tracking-[0.2em] text-white">{activeModel}</span>
+                     <span className={`text-[8px] font-black uppercase tracking-[0.2em] ${!activeSubmodel ? 'text-white' : 'text-white/30'}`}>{activeModel}</span>
+                   </>
+                 )}
+                 {activeSubmodel && (
+                   <>
+                     <ChevronRight size={8} className="text-white/20" />
+                     <span className="text-[8px] font-black uppercase tracking-[0.2em] text-white">{activeSubmodel}</span>
                    </>
                  )}
                </div>
@@ -140,6 +156,7 @@ export default function PublicCatalog({ catalog, initialCategoryName = null }: {
                     setActiveCategory(null);
                     setActiveSubcategory(null);
                     setActiveModel(null);
+                    setActiveSubmodel(null);
                   }}
                   className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all border ${!activeCategory ? 'bg-white text-black border-white shadow-xl shadow-white/10 scale-105' : 'bg-white/5 text-white/40 border-white/10 hover:border-white/30'}`}
                 >
@@ -152,6 +169,7 @@ export default function PublicCatalog({ catalog, initialCategoryName = null }: {
                       setActiveCategory(cat.name);
                       setActiveSubcategory(null);
                       setActiveModel(null);
+                      setActiveSubmodel(null);
                     }}
                     className={`px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all border ${activeCategory === cat.name ? 'bg-white text-black border-white shadow-xl shadow-white/10 scale-105' : 'bg-white/5 text-white/40 border-white/10 hover:border-white/30'}`}
                   >
@@ -178,6 +196,7 @@ export default function PublicCatalog({ catalog, initialCategoryName = null }: {
                       onClick={() => {
                         setActiveSubcategory(activeSubcategory === sub.name ? null : sub.name);
                         setActiveModel(null);
+                        setActiveSubmodel(null);
                       }}
                       className={`px-6 py-2.5 rounded-lg text-[9px] font-black uppercase tracking-widest whitespace-nowrap transition-all border ${activeSubcategory === sub.name ? 'bg-emerald-500 text-black border-emerald-500' : 'bg-white/5 text-white/40 border-white/10 hover:bg-white/10'}`}
                     >
@@ -202,10 +221,37 @@ export default function PublicCatalog({ catalog, initialCategoryName = null }: {
                   {models.map((mod: any) => (
                     <button 
                       key={mod.id}
-                      onClick={() => setActiveModel(activeModel === mod.name ? null : mod.name)}
+                      onClick={() => {
+                        setActiveModel(activeModel === mod.name ? null : mod.name);
+                        setActiveSubmodel(null);
+                      }}
                       className={`px-5 py-2 rounded-md text-[8px] font-black uppercase tracking-widest whitespace-nowrap transition-all border ${activeModel === mod.name ? 'bg-yellow-400 text-black border-yellow-400' : 'bg-white/5 text-white/30 border-white/10 hover:bg-white/10'}`}
                     >
                       {mod.name}
+                    </button>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <AnimatePresence mode="wait">
+            {activeModel && submodels.length > 0 && (
+              <motion.div 
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="space-y-2 border-t border-white/5 pt-4"
+              >
+                <p className="text-[7px] font-black uppercase tracking-[0.5em] text-white/20 ml-2">Sub-Modelo Específico</p>
+                <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar scroll-smooth">
+                  {submodels.map((smod: any) => (
+                    <button 
+                      key={smod.id}
+                      onClick={() => setActiveSubmodel(activeSubmodel === smod.name ? null : smod.name)}
+                      className={`px-5 py-2 rounded-md text-[8px] font-black uppercase tracking-widest whitespace-nowrap transition-all border ${activeSubmodel === smod.name ? 'bg-blue-400 text-black border-blue-400' : 'bg-white/5 text-white/30 border-white/10 hover:bg-white/10'}`}
+                    >
+                      {smod.name}
                     </button>
                   ))}
                 </div>

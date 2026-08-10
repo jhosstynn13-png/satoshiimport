@@ -55,7 +55,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
               </button>
               <button 
                 onClick={(e) => { e.stopPropagation(); onDelete(); }}
-                className="p-3.5 bg-red-600 text-white rounded-2xl shadow-2xl hover:scale-110 active:scale-95 transition-all border border-white/20 hover:bg-red-500"
+                className="p-3.5 bg-red-600/20 text-red-400 hover:scale-110 active:scale-95 transition-all border border-red-500/30 hover:bg-red-500 hover:text-white rounded-2xl shadow-2xl"
                 title="Eliminar"
               >
                 <Trash2 size={18} />

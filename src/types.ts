@@ -15,10 +15,17 @@ export interface Product {
   status: 'active' | 'discontinued';
 }
 
-export interface Model {
+export interface Submodel {
   id: string;
   name: string;
   products: Product[];
+}
+
+export interface Model {
+  id: string;
+  name: string;
+  submodels: Submodel[];
+  products?: Product[]; // For backward compatibility migration
 }
 
 export interface Subcategory {

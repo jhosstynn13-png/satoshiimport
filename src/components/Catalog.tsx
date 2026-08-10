@@ -31,15 +31,20 @@ export default function Catalog({ catalog, searchQuery }: CatalogProps) {
     setSelectedSubcategoryId,
     selectedModelId,
     setSelectedModelId,
+    selectedSubmodelId,
+    setSelectedSubmodelId,
     selectedCategory,
     selectedSubcategory,
     selectedModel,
+    selectedSubmodel,
     addCategory,
     deleteCategory,
     addSubcategory,
     deleteSubcategory,
     addModel,
     deleteModel,
+    addSubmodel,
+    deleteSubmodel,
     addProduct,
     updateProduct,
     deleteProduct,
@@ -53,8 +58,10 @@ export default function Catalog({ catalog, searchQuery }: CatalogProps) {
   const [newCatName, setNewCatName] = useState('');
   const [newSubName, setNewSubName] = useState('');
   const [newModelName, setNewModelName] = useState('');
+  const [newSubmodelName, setNewSubmodelName] = useState('');
   const [sortOrder, setSortOrder] = useState<'new' | 'name' | 'priceAsc' | 'priceDesc'>('new');
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [productToDelete, setProductToDelete] = useState<Product | null>(null);
 
   const filteredProducts = useMemo(() => {
     // If there's a search query, search in ALL products across the entire catalog
@@ -74,9 +81,20 @@ export default function Catalog({ catalog, searchQuery }: CatalogProps) {
       return products;
     }
 
-    // Otherwise, show only products from the selected model
-    if (!selectedModel) return [];
-    let products = [...selectedModel.products];
+    // Filter by the selected hierarchy level
+    let products = allProducts;
+    if (selectedCategoryId) {
+      products = products.filter(p => p.category === selectedCategory?.name);
+    }
+    if (selectedSubcategoryId) {
+      products = products.filter(p => p.subcategory === selectedSubcategory?.name);
+    }
+    if (selectedModelId) {
+      products = products.filter(p => p.model === selectedModel?.name);
+    }
+    if (selectedSubmodelId) {
+      products = products.filter(p => p.submodel === selectedSubmodel?.name);
+    }
 
     if (sortOrder === 'name') products.sort((a, b) => a.name.localeCompare(b.name));
     if (sortOrder === 'priceAsc') products.sort((a, b) => a.price - b.price);
@@ -84,7 +102,7 @@ export default function Catalog({ catalog, searchQuery }: CatalogProps) {
     if (sortOrder === 'new') products.sort((a, b) => b.createdAt - a.createdAt);
 
     return products;
-  }, [selectedSubcategory, searchQuery, sortOrder, allProducts]);
+  }, [selectedCategoryId, selectedSubcategoryId, selectedModelId, selectedSubmodelId, selectedCategory, selectedSubcategory, selectedModel, selectedSubmodel, searchQuery, sortOrder, allProducts]);
 
   const [productForm, setProductForm] = useState({
     name: '',
@@ -95,10 +113,35 @@ export default function Catalog({ catalog, searchQuery }: CatalogProps) {
     description: ''
   });
 
+  const handleBulkUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    if (!selectedSubmodelId) return alert("Selecciona un sub-modelo primero");
+
+    Array.from(files).forEach((file: File) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        addProduct(selectedSubmodelId, {
+          name: '',
+          sku: '',
+          image: reader.result as string,
+          price: 0,
+          sizes: [],
+          description: '',
+          status: 'active'
+        });
+      };
+      reader.readAsDataURL(file);
+    });
+    
+    // Reset file input
+    e.target.value = '';
+  };
+
   const handleAddProduct = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedModelId) return alert("Selecciona un modelo");
-    addProduct(selectedModelId, {
+    if (!selectedSubmodelId) return alert("Selecciona un sub-modelo");
+    addProduct(selectedSubmodelId, {
       name: productForm.name,
       sku: productForm.sku,
       image: productForm.image,
@@ -111,7 +154,7 @@ export default function Catalog({ catalog, searchQuery }: CatalogProps) {
   };
 
   return (
-    <div className="grid grid-cols-1 xl:grid-cols-[280px_280px_280px_1fr] gap-6">
+    <div className="grid grid-cols-1 xl:grid-cols-[240px_240px_240px_240px_1fr] gap-6">
       {/* Categories Column */}
       <div className="glass rounded-[48px] p-8 flex flex-col h-[calc(100vh-250px)] shadow-2xl relative overflow-hidden group">
         <div className="flex items-center gap-4 mb-8">
@@ -121,32 +164,22 @@ export default function Catalog({ catalog, searchQuery }: CatalogProps) {
           <h3 className="font-black uppercase italic tracking-tighter text-lg">Categorías</h3>
         </div>
         
-        {isStaff && (
-          <form 
-            onSubmit={(e) => { e.preventDefault(); if(newCatName) { addCategory(newCatName); setNewCatName(''); } }}
-            className="flex gap-2 mb-8"
-          >
-            <input 
-              type="text" 
-              placeholder="CREAR..." 
-              value={newCatName}
-              onChange={(e) => setNewCatName(e.target.value)}
-              className="flex-1 px-5 py-4 bg-white/5 border border-white/5 rounded-2xl text-[10px] font-black uppercase tracking-widest outline-none focus:bg-white/10 focus:border-white/20 transition-all placeholder:text-white/30"
-            />
-            <button className="p-4 bg-white text-black rounded-2xl hover:scale-105 active:scale-95 transition-all shadow-xl shadow-white/10">
-              <Plus size={20} />
-            </button>
-          </form>
-        )}
-
-        <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar pr-2">
+        <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar pr-2 mb-4">
           {data.categories.map((cat) => (
             <div 
               key={cat.id}
               onClick={() => {
-                setSelectedCategoryId(cat.id);
-                setSelectedSubcategoryId(cat.subcategories[0]?.id || null);
-                setSelectedModelId(cat.subcategories[0]?.models[0]?.id || null);
+                if (selectedCategoryId === cat.id) {
+                  setSelectedCategoryId(null);
+                  setSelectedSubcategoryId(null);
+                  setSelectedModelId(null);
+                  setSelectedSubmodelId(null);
+                } else {
+                  setSelectedCategoryId(cat.id);
+                  setSelectedSubcategoryId(null);
+                  setSelectedModelId(null);
+                  setSelectedSubmodelId(null);
+                }
               }}
               className={`group flex items-center justify-between p-5 rounded-[24px] cursor-pointer transition-all duration-500 border ${
                 selectedCategoryId === cat.id 
@@ -157,11 +190,24 @@ export default function Catalog({ catalog, searchQuery }: CatalogProps) {
               <span className="text-xs font-black uppercase italic tracking-widest truncate flex-1">{cat.name}</span>
               <div className="flex items-center gap-3">
                 <span className={`text-[10px] px-2 py-1 rounded-lg font-black ${selectedCategoryId === cat.id ? 'bg-black/10 text-black' : 'bg-white/10 text-white/50'}`}>
-                  {cat.subcategories.reduce((acc, s) => acc + (s.models?.reduce((mAcc, m) => mAcc + (m.products?.length || 0), 0) || 0), 0)}
+                  {cat.subcategories.reduce((acc, s) => acc + (s.models?.reduce((mAcc, m) => mAcc + (m.submodels?.reduce((smAcc, sm) => smAcc + (sm.products?.length || 0), 0) || 0), 0) || 0), 0)}
                 </span>
                 {isAdmin && (
                   <button 
-                    onClick={(e) => { e.stopPropagation(); if(confirm('¿Eliminar categoría?')) deleteCategory(cat.id); }}
+                    onClick={(e) => { 
+                      e.stopPropagation(); 
+                      if (e.currentTarget.dataset.confirm === 'true') {
+                        deleteCategory(cat.id);
+                      } else {
+                        e.currentTarget.dataset.confirm = 'true';
+                        e.currentTarget.classList.add('bg-red-500', 'text-white');
+                        const btn = e.currentTarget;
+                        setTimeout(() => {
+                          btn.dataset.confirm = 'false';
+                          btn.classList.remove('bg-red-500', 'text-white');
+                        }, 3000);
+                      }
+                    }}
                     className={`p-1.5 rounded-lg transition-all ${selectedCategoryId === cat.id ? 'hover:bg-black/10 text-black/60 hover:text-black' : 'opacity-0 group-hover:opacity-100 text-white/40 hover:text-white hover:bg-white/10'}`}
                   >
                     <Trash2 size={14} />
@@ -171,6 +217,24 @@ export default function Catalog({ catalog, searchQuery }: CatalogProps) {
             </div>
           ))}
         </div>
+
+        {isStaff && (
+          <form 
+            onSubmit={(e) => { e.preventDefault(); if(newCatName) { addCategory(newCatName); setNewCatName(''); } }}
+            className="flex flex-col gap-2"
+          >
+            <input 
+              type="text" 
+              placeholder="NUEVA CATEGORÍA" 
+              value={newCatName}
+              onChange={(e) => setNewCatName(e.target.value)}
+              className="w-full px-5 py-4 bg-white/5 border border-white/5 rounded-2xl text-[10px] font-black uppercase tracking-widest outline-none focus:bg-white/10 focus:border-white/20 transition-all placeholder:text-white/30"
+            />
+            <button type="submit" className="w-full py-4 bg-white text-black rounded-2xl hover:bg-gray-200 active:scale-95 transition-all shadow-xl shadow-white/10 flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest">
+              <Plus size={16} /> Agregar
+            </button>
+          </form>
+        )}
       </div>
 
       {/* Subcategories Column */}
@@ -184,31 +248,20 @@ export default function Catalog({ catalog, searchQuery }: CatalogProps) {
 
         {selectedCategory ? (
           <>
-            {isStaff && (
-              <form 
-                onSubmit={(e) => { e.preventDefault(); if(newSubName) { addSubcategory(selectedCategory.id, newSubName); setNewSubName(''); } }}
-                className="flex gap-2 mb-8"
-              >
-                <input 
-                  type="text" 
-                  placeholder="AÑADIR..." 
-                  value={newSubName}
-                  onChange={(e) => setNewSubName(e.target.value)}
-                  className="flex-1 px-5 py-4 bg-white/5 border border-white/5 rounded-2xl text-[10px] font-black uppercase tracking-widest outline-none focus:bg-white/10 focus:border-white/20 transition-all placeholder:text-white/30"
-                />
-                <button className="p-4 bg-white text-black rounded-2xl hover:scale-105 active:scale-95 transition-all shadow-xl shadow-white/10">
-                  <Plus size={20} />
-                </button>
-              </form>
-            )}
-
-            <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar pr-2">
+            <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar pr-2 mb-4">
               {selectedCategory.subcategories.map((sub) => (
                 <div 
                   key={sub.id}
                   onClick={() => {
-                    setSelectedSubcategoryId(sub.id);
-                    setSelectedModelId(sub.models[0]?.id || null);
+                    if (selectedSubcategoryId === sub.id) {
+                      setSelectedSubcategoryId(null);
+                      setSelectedModelId(null);
+                      setSelectedSubmodelId(null);
+                    } else {
+                      setSelectedSubcategoryId(sub.id);
+                      setSelectedModelId(null);
+                      setSelectedSubmodelId(null);
+                    }
                   }}
                   className={`group flex items-center justify-between p-5 rounded-[24px] cursor-pointer transition-all duration-500 border ${
                     selectedSubcategoryId === sub.id 
@@ -219,11 +272,24 @@ export default function Catalog({ catalog, searchQuery }: CatalogProps) {
                   <span className="text-xs font-black uppercase italic tracking-widest truncate flex-1">{sub.name}</span>
                   <div className="flex items-center gap-3">
                     <span className={`text-[10px] px-2 py-1 rounded-lg font-black ${selectedSubcategoryId === sub.id ? 'bg-black/10 text-black' : 'bg-white/10 text-white/50'}`}>
-                      {sub.models.reduce((acc, m) => acc + m.products.length, 0)}
+                      {sub.models.reduce((acc, m) => acc + (m.submodels?.reduce((smAcc, sm) => smAcc + (sm.products?.length || 0), 0) || 0), 0)}
                     </span>
                     {isAdmin && (
                       <button 
-                        onClick={(e) => { e.stopPropagation(); if(confirm('¿Eliminar subcategoría?')) deleteSubcategory(selectedCategory.id, sub.id); }}
+                        onClick={(e) => { 
+                          e.stopPropagation(); 
+                          if (e.currentTarget.dataset.confirm === 'true') {
+                            deleteSubcategory(selectedCategory.id, sub.id);
+                          } else {
+                            e.currentTarget.dataset.confirm = 'true';
+                            e.currentTarget.classList.add('bg-red-500', 'text-white');
+                            const btn = e.currentTarget;
+                            setTimeout(() => {
+                              btn.dataset.confirm = 'false';
+                              btn.classList.remove('bg-red-500', 'text-white');
+                            }, 3000);
+                          }
+                        }}
                         className={`p-1.5 rounded-lg transition-all ${selectedSubcategoryId === sub.id ? 'hover:bg-black/10 text-black/60 hover:text-black' : 'opacity-0 group-hover:opacity-100 text-white/40 hover:text-white hover:bg-white/10'}`}
                       >
                         <Trash2 size={14} />
@@ -236,6 +302,24 @@ export default function Catalog({ catalog, searchQuery }: CatalogProps) {
                 <div className="text-center py-24 text-white/10 text-[10px] uppercase font-black italic tracking-widest">Sin Selección Virtual</div>
               )}
             </div>
+
+            {isStaff && (
+              <form 
+                onSubmit={(e) => { e.preventDefault(); if(newSubName) { addSubcategory(selectedCategory.id, newSubName); setNewSubName(''); } }}
+                className="flex flex-col gap-2"
+              >
+                <input 
+                  type="text" 
+                  placeholder="NUEVA MARCA/LÍNEA" 
+                  value={newSubName}
+                  onChange={(e) => setNewSubName(e.target.value)}
+                  className="w-full px-5 py-4 bg-white/5 border border-white/5 rounded-2xl text-[10px] font-black uppercase tracking-widest outline-none focus:bg-white/10 focus:border-white/20 transition-all placeholder:text-white/30"
+                />
+                <button type="submit" className="w-full py-4 bg-white text-black rounded-2xl hover:bg-gray-200 active:scale-95 transition-all shadow-xl shadow-white/10 flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest">
+                  <Plus size={16} /> Agregar
+                </button>
+              </form>
+            )}
           </>
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center text-white/5 text-center px-8">
@@ -256,29 +340,19 @@ export default function Catalog({ catalog, searchQuery }: CatalogProps) {
 
         {selectedSubcategory ? (
           <>
-            {isStaff && (
-              <form 
-                onSubmit={(e) => { e.preventDefault(); if(newModelName) { addModel(selectedCategory!.id, selectedSubcategory.id, newModelName); setNewModelName(''); } }}
-                className="flex gap-2 mb-8"
-              >
-                <input 
-                  type="text" 
-                  placeholder="CREAR..." 
-                  value={newModelName}
-                  onChange={(e) => setNewModelName(e.target.value)}
-                  className="flex-1 px-5 py-4 bg-white/5 border border-white/5 rounded-2xl text-[10px] font-black uppercase tracking-widest outline-none focus:bg-white/10 focus:border-white/20 transition-all placeholder:text-white/30"
-                />
-                <button className="p-4 bg-white text-black rounded-2xl hover:scale-105 active:scale-95 transition-all shadow-xl shadow-white/10">
-                  <Plus size={20} />
-                </button>
-              </form>
-            )}
-
-            <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar pr-2">
+            <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar pr-2 mb-4">
               {selectedSubcategory.models.map((mod) => (
                 <div 
                   key={mod.id}
-                  onClick={() => setSelectedModelId(mod.id)}
+                  onClick={() => {
+                    if (selectedModelId === mod.id) {
+                      setSelectedModelId(null);
+                      setSelectedSubmodelId(null);
+                    } else {
+                      setSelectedModelId(mod.id);
+                      setSelectedSubmodelId(null);
+                    }
+                  }}
                   className={`group flex items-center justify-between p-5 rounded-[24px] cursor-pointer transition-all duration-500 border ${
                     selectedModelId === mod.id 
                       ? 'bg-white text-black shadow-[0_10px_30px_rgba(255,255,255,0.1)] border-white ring-1 ring-white/20' 
@@ -288,11 +362,24 @@ export default function Catalog({ catalog, searchQuery }: CatalogProps) {
                   <span className="text-xs font-black uppercase italic tracking-widest truncate flex-1">{mod.name}</span>
                   <div className="flex items-center gap-3">
                     <span className={`text-[10px] px-2 py-1 rounded-lg font-black ${selectedModelId === mod.id ? 'bg-black/10 text-black' : 'bg-white/10 text-white/50'}`}>
-                      {mod.products.length}
+                      {mod.submodels?.reduce((smAcc, sm) => smAcc + (sm.products?.length || 0), 0) || 0}
                     </span>
                     {isAdmin && (
                       <button 
-                        onClick={(e) => { e.stopPropagation(); if(confirm('¿Eliminar modelo?')) deleteModel(selectedCategory!.id, selectedSubcategory.id, mod.id); }}
+                        onClick={(e) => { 
+                          e.stopPropagation(); 
+                          if (e.currentTarget.dataset.confirm === 'true') {
+                            deleteModel(selectedCategory!.id, selectedSubcategory.id, mod.id);
+                          } else {
+                            e.currentTarget.dataset.confirm = 'true';
+                            e.currentTarget.classList.add('bg-red-500', 'text-white');
+                            const btn = e.currentTarget;
+                            setTimeout(() => {
+                              btn.dataset.confirm = 'false';
+                              btn.classList.remove('bg-red-500', 'text-white');
+                            }, 3000);
+                          }
+                        }}
                         className={`p-1.5 rounded-lg transition-all ${selectedModelId === mod.id ? 'hover:bg-black/10 text-black/60 hover:text-black' : 'opacity-0 group-hover:opacity-100 text-white/40 hover:text-white hover:bg-white/10'}`}
                       >
                         <Trash2 size={14} />
@@ -305,11 +392,117 @@ export default function Catalog({ catalog, searchQuery }: CatalogProps) {
                 <div className="text-center py-24 text-white/10 text-[10px] uppercase font-black italic tracking-widest">Sin Modelos</div>
               )}
             </div>
+
+            {isStaff && (
+              <form 
+                onSubmit={(e) => { e.preventDefault(); if(newModelName) { addModel(selectedCategory!.id, selectedSubcategory.id, newModelName); setNewModelName(''); } }}
+                className="flex flex-col gap-2"
+              >
+                <input 
+                  type="text" 
+                  placeholder="NUEVO MODELO" 
+                  value={newModelName}
+                  onChange={(e) => setNewModelName(e.target.value)}
+                  className="w-full px-5 py-4 bg-white/5 border border-white/5 rounded-2xl text-[10px] font-black uppercase tracking-widest outline-none focus:bg-white/10 focus:border-white/20 transition-all placeholder:text-white/30"
+                />
+                <button type="submit" className="w-full py-4 bg-white text-black rounded-2xl hover:bg-gray-200 active:scale-95 transition-all shadow-xl shadow-white/10 flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest">
+                  <Plus size={16} /> Agregar
+                </button>
+              </form>
+            )}
           </>
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center text-white/5 text-center px-8">
             <Box size={80} className="mb-6 opacity-40 rotate-12" />
             <p className="text-[10px] font-black uppercase tracking-widest italic">Elige la sub-línea</p>
+          </div>
+        )}
+      </div>
+
+      {/* Submodels Column */}
+      <div className="glass rounded-[48px] p-8 flex flex-col h-[calc(100vh-250px)] shadow-2xl relative overflow-hidden group">
+        <div className="flex items-center gap-4 mb-8">
+          <div className="p-3 bg-white text-black rounded-2xl shadow-xl shadow-white/10">
+            <MoreVertical size={20} />
+          </div>
+          <h3 className="font-black uppercase italic tracking-tighter text-lg">Sub-Modelos</h3>
+        </div>
+
+        {selectedModel ? (
+          <>
+            <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar pr-2 mb-4">
+              {selectedModel.submodels?.map((smod) => (
+                <div 
+                  key={smod.id}
+                  onClick={() => {
+                    if (selectedSubmodelId === smod.id) {
+                      setSelectedSubmodelId(null);
+                    } else {
+                      setSelectedSubmodelId(smod.id);
+                    }
+                  }}
+                  className={`group flex items-center justify-between p-5 rounded-[24px] cursor-pointer transition-all duration-500 border ${
+                    selectedSubmodelId === smod.id 
+                      ? 'bg-white text-black shadow-[0_10px_30px_rgba(255,255,255,0.1)] border-white ring-1 ring-white/20' 
+                      : 'bg-white/5 border-transparent hover:bg-white/[0.08]'
+                  }`}
+                >
+                  <span className="text-xs font-black uppercase italic tracking-widest truncate flex-1">{smod.name}</span>
+                  <div className="flex items-center gap-3">
+                    <span className={`text-[10px] px-2 py-1 rounded-lg font-black ${selectedSubmodelId === smod.id ? 'bg-black/10 text-black' : 'bg-white/10 text-white/50'}`}>
+                      {smod.products?.length || 0}
+                    </span>
+                    {isAdmin && (
+                      <button 
+                        onClick={(e) => { 
+                          e.stopPropagation(); 
+                          if (e.currentTarget.dataset.confirm === 'true') {
+                            deleteSubmodel(selectedCategory!.id, selectedSubcategory!.id, selectedModel.id, smod.id);
+                          } else {
+                            e.currentTarget.dataset.confirm = 'true';
+                            e.currentTarget.classList.add('bg-red-500', 'text-white');
+                            const btn = e.currentTarget;
+                            setTimeout(() => {
+                              btn.dataset.confirm = 'false';
+                              btn.classList.remove('bg-red-500', 'text-white');
+                            }, 3000);
+                          }
+                        }}
+                        className={`p-1.5 rounded-lg transition-all ${selectedSubmodelId === smod.id ? 'hover:bg-black/10 text-black/60 hover:text-black' : 'opacity-0 group-hover:opacity-100 text-white/40 hover:text-white hover:bg-white/10'}`}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+              {(!selectedModel.submodels || selectedModel.submodels.length === 0) && (
+                <div className="text-center py-24 text-white/10 text-[10px] uppercase font-black italic tracking-widest">Sin Sub-Modelos</div>
+              )}
+            </div>
+
+            {isStaff && (
+              <form 
+                onSubmit={(e) => { e.preventDefault(); if(newSubmodelName) { addSubmodel(selectedCategory!.id, selectedSubcategory!.id, selectedModel.id, newSubmodelName); setNewSubmodelName(''); } }}
+                className="flex flex-col gap-2"
+              >
+                <input 
+                  type="text" 
+                  placeholder="NUEVO SUB-MODELO" 
+                  value={newSubmodelName}
+                  onChange={(e) => setNewSubmodelName(e.target.value)}
+                  className="w-full px-5 py-4 bg-white/5 border border-white/5 rounded-2xl text-[10px] font-black uppercase tracking-widest outline-none focus:bg-white/10 focus:border-white/20 transition-all placeholder:text-white/30"
+                />
+                <button type="submit" className="w-full py-4 bg-white text-black rounded-2xl hover:bg-gray-200 active:scale-95 transition-all shadow-xl shadow-white/10 flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest">
+                  <Plus size={16} /> Agregar
+                </button>
+              </form>
+            )}
+          </>
+        ) : (
+          <div className="flex-1 flex flex-col items-center justify-center text-white/5 text-center px-8">
+            <Box size={80} className="mb-6 opacity-40 rotate-12" />
+            <p className="text-[10px] font-black uppercase tracking-widest italic">Elige el modelo</p>
           </div>
         )}
       </div>
@@ -329,18 +522,17 @@ export default function Catalog({ catalog, searchQuery }: CatalogProps) {
               </div>
             </div>
             
-            <form onSubmit={handleAddProduct} className="grid grid-cols-1 md:grid-cols-6 gap-6">
-              <div className="md:col-span-3">
+            <form onSubmit={handleAddProduct} className="grid grid-cols-1 md:grid-cols-12 gap-6">
+              <div className="md:col-span-6">
                 <input 
                   type="text" 
                   placeholder="DENOMINACIÓN COMERCIAL" 
-                  required
                   value={productForm.name}
                   onChange={e => setProductForm({...productForm, name: e.target.value})}
                   className="w-full px-6 py-5 bg-white/5 border border-white/5 rounded-[24px] outline-none focus:bg-white/10 focus:border-white/20 transition-all text-xs font-bold tracking-widest uppercase placeholder:text-white/30"
                 />
               </div>
-              <div className="md:col-span-2">
+              <div className="md:col-span-3">
                 <input 
                   type="text" 
                   placeholder="SKU REF" 
@@ -349,21 +541,20 @@ export default function Catalog({ catalog, searchQuery }: CatalogProps) {
                   className="w-full px-6 py-5 bg-white/5 border border-white/5 rounded-[24px] outline-none focus:bg-white/10 focus:border-white/20 transition-all text-xs font-mono font-bold tracking-widest uppercase placeholder:text-white/30"
                 />
               </div>
-              <div className="md:col-span-1">
+              <div className="md:col-span-3">
                 <div className="relative">
                   <span className="absolute left-6 top-1/2 -translate-y-1/2 text-white/40 font-black text-[10px] uppercase italic">S/</span>
                   <input 
                     type="number" 
                     step="0.01" 
                     placeholder="0" 
-                    required
                     value={productForm.price}
                     onChange={e => setProductForm({...productForm, price: e.target.value})}
                     className="w-full pl-12 pr-6 py-5 bg-white/5 border border-white/5 rounded-[24px] outline-none focus:bg-white/10 focus:border-white/20 transition-all text-xs font-black italic text-right"
                   />
                 </div>
               </div>
-              <div className="md:col-span-3">
+              <div className="md:col-span-6">
                 <div className="flex gap-2">
                   <div className="flex-1 relative group">
                     <input 
@@ -405,7 +596,7 @@ export default function Catalog({ catalog, searchQuery }: CatalogProps) {
                   </label>
                 </div>
               </div>
-              <div className="md:col-span-1">
+              <div className="md:col-span-3">
                 <input 
                   type="text" 
                   placeholder="TALLAS (SEP. COMA)" 
@@ -414,22 +605,40 @@ export default function Catalog({ catalog, searchQuery }: CatalogProps) {
                   className="w-full px-6 py-5 bg-white/5 border border-white/5 rounded-[24px] outline-none focus:bg-white/10 focus:border-white/20 transition-all text-[10px] font-black tracking-widest italic uppercase placeholder:text-white/30"
                 />
               </div>
-              <div className="md:col-span-2">
+              <div className="md:col-span-3">
                 <button 
                   type="submit"
-                  className="w-full h-full py-5 bg-white text-black font-black rounded-[24px] hover:scale-105 active:scale-95 transition-all shadow-[0_15px_40px_rgba(255,255,255,0.15)] flex items-center justify-center gap-4 uppercase italic italic tracking-tighter"
+                  className="w-full h-full py-5 bg-white text-black font-black rounded-[24px] hover:scale-105 active:scale-95 transition-all shadow-[0_15px_40px_rgba(255,255,255,0.15)] flex items-center justify-center gap-4 uppercase italic tracking-tighter"
                 >
                   <Plus size={24} />
                   <span>Registrar</span>
                 </button>
               </div>
-              <div className="md:col-span-6">
+              <div className="md:col-span-12">
                 <textarea 
                   placeholder="ESPECIFICACIONES DEL PRODUCTO Y DETALLES TÉCNICOS..." 
                   value={productForm.description}
                   onChange={e => setProductForm({...productForm, description: e.target.value})}
                   className="w-full px-8 py-6 bg-white/5 border border-white/5 rounded-[32px] outline-none focus:bg-white/10 focus:border-white/20 transition-all min-h-[140px] resize-none text-[10px] font-black uppercase tracking-[0.2em] leading-relaxed placeholder:text-white/5"
                 />
+              </div>
+              <div className="md:col-span-12 pt-4 border-t border-white/5">
+                <label className="w-full py-6 bg-white/5 hover:bg-white/10 border border-white/10 border-dashed rounded-[32px] cursor-pointer transition-all flex flex-col items-center justify-center gap-3 group active:scale-[0.98]">
+                  <input 
+                    type="file" 
+                    multiple 
+                    accept="image/*" 
+                    className="hidden" 
+                    onChange={handleBulkUpload}
+                  />
+                  <div className="p-3 bg-white/10 rounded-full group-hover:bg-white/20 transition-colors">
+                    <Upload size={24} className="text-white/80 group-hover:text-white transition-colors" />
+                  </div>
+                  <div className="text-center">
+                    <p className="text-xs font-black uppercase tracking-widest text-white">Carga Masiva de Imágenes</p>
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-white/40 mt-1">Sube múltiples fotos (Crea un ítem por cada foto automáticamente)</p>
+                  </div>
+                </label>
               </div>
             </form>
           </div>
@@ -443,7 +652,7 @@ export default function Catalog({ catalog, searchQuery }: CatalogProps) {
             </div>
             <div>
               <h3 className="font-black text-2xl text-white uppercase italic tracking-tighter">
-                Inventario <span className="text-white/40">/</span> {selectedModel?.name || '...'}
+                Inventario <span className="text-white/40">/</span> {selectedSubmodel?.name || '...'}
               </h3>
               <p className="text-[10px] text-white/40 font-black uppercase tracking-[0.3em] mt-1">{filteredProducts.length} Ítems Virtuales</p>
             </div>
@@ -457,10 +666,10 @@ export default function Catalog({ catalog, searchQuery }: CatalogProps) {
                 onChange={e => setSortOrder(e.target.value as any)}
                 className="pl-13 pr-8 py-4 bg-white/5 border border-white/10 rounded-[24px] text-[10px] font-black uppercase italic tracking-widest text-white/80 outline-none hover:bg-white/10 focus:border-white focus:text-white appearance-none cursor-pointer min-w-[240px] transition-all"
               >
-                <option value="new">Orden Cronológico</option>
-                <option value="name">Alfabético [A-Z]</option>
-                <option value="priceAsc">Menor Valor</option>
-                <option value="priceDesc">Mayor Valor</option>
+                <option value="new" className="bg-zinc-900 text-white">Orden Cronológico</option>
+                <option value="name" className="bg-zinc-900 text-white">Alfabético [A-Z]</option>
+                <option value="priceAsc" className="bg-zinc-900 text-white">Menor Valor</option>
+                <option value="priceDesc" className="bg-zinc-900 text-white">Mayor Valor</option>
               </select>
             </div>
           </div>
@@ -475,10 +684,7 @@ export default function Catalog({ catalog, searchQuery }: CatalogProps) {
                 product={p} 
                 onEdit={() => setEditingProduct(p)}
                 onDelete={() => {
-                  if (confirm('¿Eliminar producto definitivamente?')) {
-                    // If we are searching, we pass null to delete from any model it's in
-                    deleteProduct(searchQuery ? null : selectedModelId, p.id);
-                  }
+                  setProductToDelete(p);
                 }}
                 showControls={isStaff}
               />
@@ -500,10 +706,51 @@ export default function Catalog({ catalog, searchQuery }: CatalogProps) {
           product={editingProduct} 
           onClose={() => setEditingProduct(null)} 
           onSave={(data) => {
-            updateProduct(selectedModelId!, editingProduct.id, data);
+            updateProduct((editingProduct as any).submodelId || selectedSubmodelId!, editingProduct.id, data);
             setEditingProduct(null);
           }}
         />
+      )}
+
+      {productToDelete && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="w-full max-w-md glass p-8 rounded-[40px] border border-white/10 flex flex-col items-center text-center gap-6"
+          >
+            <div className="w-20 h-20 bg-red-600/20 text-red-500 rounded-full flex items-center justify-center border border-red-500/30">
+              <Trash2 size={32} />
+            </div>
+            
+            <div>
+              <h3 className="text-2xl font-black italic uppercase tracking-tighter text-white mb-2">
+                ¿Eliminar Producto?
+              </h3>
+              <p className="text-white/60 text-sm font-medium">
+                Estás a punto de eliminar <span className="text-white font-black">"{productToDelete.name}"</span>. Esta acción no se puede deshacer.
+              </p>
+            </div>
+
+            <div className="flex gap-4 w-full">
+              <button
+                onClick={() => setProductToDelete(null)}
+                className="flex-1 py-4 bg-white/5 hover:bg-white/10 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] transition-all"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => {
+                  deleteProduct(searchQuery ? null : selectedSubmodelId, productToDelete.id);
+                  setProductToDelete(null);
+                }}
+                className="flex-1 py-4 bg-red-600 hover:bg-red-500 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] transition-all shadow-xl shadow-red-900/20"
+              >
+                Eliminar
+              </button>
+            </div>
+          </motion.div>
+        </div>
       )}
     </div>
   );

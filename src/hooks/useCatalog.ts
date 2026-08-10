@@ -25,7 +25,7 @@ export function useCatalog() {
     const saved = localStorage.getItem(STORAGE_KEY);
     const parsed = saved ? JSON.parse(saved) : starterData;
     
-    // Migration: ensure subcategories have models
+    // Migration: ensure subcategories have models and models have submodels
     if (parsed.categories && Array.isArray(parsed.categories)) {
       parsed.categories.forEach((cat: Category) => {
         if (cat.subcategories && Array.isArray(cat.subcategories)) {
@@ -36,10 +36,28 @@ export function useCatalog() {
                 sub.models.push({
                   id: 'mod-legacy-' + sub.id,
                   name: 'GENERAL',
-                  products: sub.products
+                  submodels: [{
+                    id: 'submod-legacy-' + sub.id,
+                    name: 'GENERAL',
+                    products: sub.products
+                  }]
                 });
                 delete sub.products;
               }
+            } else {
+              sub.models.forEach((mod: any) => {
+                if (!mod.submodels) {
+                  mod.submodels = [];
+                  if (mod.products && Array.isArray(mod.products) && mod.products.length > 0) {
+                    mod.submodels.push({
+                      id: 'submod-legacy-' + mod.id,
+                      name: 'GENERAL',
+                      products: mod.products
+                    });
+                    delete mod.products;
+                  }
+                }
+              });
             }
           });
         }
@@ -47,12 +65,8 @@ export function useCatalog() {
     }
     if (!parsed.orders) parsed.orders = [];
     if (!parsed.customers) parsed.customers = [];
-    
-    // Force/Update Admin User to match the current configured admin email
-    const ADMIN_EMAIL = 'jhosstynn13@gmail.com';
-    if (!parsed.users) {
-      parsed.users = [];
-    }
+    if (!parsed.users) parsed.users = [];
+    if (!parsed.categories) parsed.categories = [];
     
     // Ensure both primary admins are protected/synced
     const jhosstynnIndex = parsed.users.findIndex((u: User) => u.email.toLowerCase() === 'jhosstynn13@gmail.com');
@@ -173,6 +187,9 @@ export function useCatalog() {
   const [selectedModelId, setSelectedModelId] = useState<string | null>(
     data.categories[0]?.subcategories[0]?.models[0]?.id || null
   );
+  const [selectedSubmodelId, setSelectedSubmodelId] = useState<string | null>(
+    data.categories[0]?.subcategories[0]?.models[0]?.submodels?.[0]?.id || null
+  );
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
@@ -181,19 +198,23 @@ export function useCatalog() {
   const uid = () => crypto?.randomUUID?.() || Date.now().toString(36) + Math.random().toString(36).slice(2);
 
   const selectedCategory = useMemo(() => 
-    data.categories.find(c => c.id === selectedCategoryId) || null
+    data.categories?.find(c => c.id === selectedCategoryId) || null
   , [data.categories, selectedCategoryId]);
 
   const selectedSubcategory = useMemo(() => 
-    selectedCategory?.subcategories.find(s => s.id === selectedSubcategoryId) || null
+    selectedCategory?.subcategories?.find(s => s.id === selectedSubcategoryId) || null
   , [selectedCategory, selectedSubcategoryId]);
 
   const selectedModel = useMemo(() => 
-    selectedSubcategory?.models.find(m => m.id === selectedModelId) || null
+    selectedSubcategory?.models?.find(m => m.id === selectedModelId) || null
   , [selectedSubcategory, selectedModelId]);
 
+  const selectedSubmodel = useMemo(() => 
+    selectedModel?.submodels?.find(s => s.id === selectedSubmodelId) || null
+  , [selectedModel, selectedSubmodelId]);
+
   const allProducts = useMemo(() => {
-    const products: (Product & { category: string; subcategory: string; model: string })[] = [];
+    const products: (Product & { category: string; subcategory: string; model: string; submodel: string; submodelId: string })[] = [];
     if (!data.categories) return products;
     
     data.categories.forEach(cat => {
@@ -201,9 +222,12 @@ export function useCatalog() {
       cat.subcategories.forEach(sub => {
         if (!sub.models) return;
         sub.models.forEach(model => {
-          if (!model.products) return;
-          model.products.forEach(product => {
-            products.push({ ...product, category: cat.name, subcategory: sub.name, model: model.name });
+          if (!model.submodels) return;
+          model.submodels.forEach(submodel => {
+            if (!submodel.products) return;
+            submodel.products.forEach(product => {
+              products.push({ ...product, category: cat.name, subcategory: sub.name, model: model.name, submodel: submodel.name, submodelId: submodel.id });
+            });
           });
         });
       });
@@ -310,7 +334,72 @@ export function useCatalog() {
     }
   };
 
-  const addProduct = (modelId: string, productData: Omit<Product, 'id' | 'createdAt'>) => {
+  const addSubmodel = (categoryId: string, subId: string, modelId: string, name: string) => {
+    setData(prev => ({
+      ...prev,
+      categories: prev.categories.map(cat => {
+        if (cat.id === categoryId) {
+          return {
+            ...cat,
+            subcategories: cat.subcategories.map(sub => {
+              if (sub.id === subId) {
+                return {
+                  ...sub,
+                  models: sub.models.map(model => {
+                    if (model.id === modelId) {
+                      return {
+                        ...model,
+                        submodels: [...model.submodels, { id: uid(), name: name.toUpperCase(), products: [] }]
+                      };
+                    }
+                    return model;
+                  })
+                };
+              }
+              return sub;
+            })
+          };
+        }
+        return cat;
+      })
+    }));
+  };
+
+  const deleteSubmodel = (categoryId: string, subId: string, modelId: string, submodelId: string) => {
+    setData(prev => ({
+      ...prev,
+      categories: prev.categories.map(cat => {
+        if (cat.id === categoryId) {
+          return {
+            ...cat,
+            subcategories: cat.subcategories.map(sub => {
+              if (sub.id === subId) {
+                return {
+                  ...sub,
+                  models: sub.models.map(model => {
+                    if (model.id === modelId) {
+                      return {
+                        ...model,
+                        submodels: model.submodels.filter(s => s.id !== submodelId)
+                      };
+                    }
+                    return model;
+                  })
+                };
+              }
+              return sub;
+            })
+          };
+        }
+        return cat;
+      })
+    }));
+    if (selectedSubmodelId === submodelId) {
+      setSelectedSubmodelId(null);
+    }
+  };
+
+  const addProduct = (submodelId: string, productData: Omit<Product, 'id' | 'createdAt'>) => {
     const newProduct: Product = {
       ...productData,
       id: uid(),
@@ -328,20 +417,25 @@ export function useCatalog() {
         subcategories: cat.subcategories.map(sub => ({
           ...sub,
           models: sub.models.map(model => {
-            if (model.id === modelId) {
-              return {
-                ...model,
-                products: [...model.products, newProduct]
-              };
-            }
-            return model;
+            return {
+              ...model,
+              submodels: model.submodels.map(submodel => {
+                if (submodel.id === submodelId) {
+                  return {
+                    ...submodel,
+                    products: [...submodel.products, newProduct]
+                  };
+                }
+                return submodel;
+              })
+            };
           })
         }))
       }))
     }));
   };
 
-  const updateProduct = (modelId: string, productId: string, productData: Partial<Product>) => {
+  const updateProduct = (submodelId: string, productId: string, productData: Partial<Product>) => {
     setData(prev => ({
       ...prev,
       categories: prev.categories.map(cat => ({
@@ -349,20 +443,25 @@ export function useCatalog() {
         subcategories: cat.subcategories.map(sub => ({
           ...sub,
           models: sub.models.map(model => {
-            if (model.id === modelId) {
-              return {
-                ...model,
-                products: model.products.map(p => p.id === productId ? { ...p, ...productData } : p)
-              };
-            }
-            return model;
+            return {
+              ...model,
+              submodels: model.submodels.map(submodel => {
+                if (submodel.id === submodelId) {
+                  return {
+                    ...submodel,
+                    products: submodel.products.map(p => p.id === productId ? { ...p, ...productData } : p)
+                  };
+                }
+                return submodel;
+              })
+            };
           })
         }))
       }))
     }));
   };
 
-  const deleteProduct = (modelId: string | null, productId: string) => {
+  const deleteProduct = (submodelId: string | null, productId: string) => {
     setData(prev => ({
       ...prev,
       categories: prev.categories.map(cat => ({
@@ -370,15 +469,18 @@ export function useCatalog() {
         subcategories: cat.subcategories.map(sub => ({
           ...sub,
           models: sub.models.map(model => {
-            // If modelId is provided, only target that model. 
-            // If not (e.g. from global search), remove it from any model where it exists.
-            if (!modelId || model.id === modelId) {
-              return {
-                ...model,
-                products: model.products.filter(p => p.id !== productId)
-              };
-            }
-            return model;
+            return {
+              ...model,
+              submodels: model.submodels.map(submodel => {
+                if (!submodelId || submodel.id === submodelId) {
+                  return {
+                    ...submodel,
+                    products: submodel.products.filter(p => p.id !== productId)
+                  };
+                }
+                return submodel;
+              })
+            };
           })
         }))
       }))
@@ -673,9 +775,12 @@ export function useCatalog() {
     setSelectedSubcategoryId,
     selectedModelId,
     setSelectedModelId,
+    selectedSubmodelId,
+    setSelectedSubmodelId,
     selectedCategory,
     selectedSubcategory,
     selectedModel,
+    selectedSubmodel,
     allProducts,
     addCategory,
     deleteCategory,
@@ -683,6 +788,8 @@ export function useCatalog() {
     deleteSubcategory,
     addModel,
     deleteModel,
+    addSubmodel,
+    deleteSubmodel,
     addProduct,
     updateProduct,
     deleteProduct,
