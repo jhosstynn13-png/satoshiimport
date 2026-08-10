@@ -8,6 +8,9 @@ import usersData from '../data/users.json';
 import ordersData from '../data/orders.json';
 import customersData from '../data/customers.json';
 
+import { db } from '../firebase';
+import { doc, setDoc, onSnapshot } from 'firebase/firestore';
+
 const STORAGE_KEY = "catalogo_pro_local_v3"; // Bumped version to force reset for user data as requested
 
 const starterData: CatalogData = {
@@ -21,7 +24,7 @@ const starterData: CatalogData = {
 export function useCatalog() {
   const { addLog } = useTerminal();
 
-  const [data, setData] = useState<CatalogData>(() => {
+  const [data, _setData] = useState<CatalogData>(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
     const parsed = saved ? JSON.parse(saved) : starterData;
     
@@ -187,13 +190,33 @@ export function useCatalog() {
   const [selectedModelId, setSelectedModelId] = useState<string | null>(
     data.categories[0]?.subcategories[0]?.models[0]?.id || null
   );
+  const setData = (value: CatalogData | ((prev: CatalogData) => CatalogData)) => {
+    _setData(prev => {
+      const newData = typeof value === 'function' ? value(prev) : value;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(newData));
+      setDoc(doc(db, "catalogs", "main"), JSON.parse(JSON.stringify(newData)));
+      return newData;
+    });
+  };
+
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, "catalogs", "main"), (snapshot) => {
+      if (snapshot.exists()) {
+        const remoteData = snapshot.data() as CatalogData;
+        if (!snapshot.metadata.hasPendingWrites) {
+          _setData(remoteData);
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(remoteData));
+        }
+      } else {
+        setDoc(doc(db, "catalogs", "main"), JSON.parse(JSON.stringify(data)));
+      }
+    });
+    return () => unsub();
+  }, []);
+
   const [selectedSubmodelId, setSelectedSubmodelId] = useState<string | null>(
     data.categories[0]?.subcategories[0]?.models[0]?.submodels?.[0]?.id || null
   );
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  }, [data]);
 
   const uid = () => crypto?.randomUUID?.() || Date.now().toString(36) + Math.random().toString(36).slice(2);
 
@@ -296,7 +319,7 @@ export function useCatalog() {
               if (sub.id === subId) {
                 return {
                   ...sub,
-                  models: [...sub.models, { id: uid(), name: name.toUpperCase(), products: [] }]
+                  models: [...sub.models, { id: uid(), name: name.toUpperCase(), submodels: [] }]
                 };
               }
               return sub;

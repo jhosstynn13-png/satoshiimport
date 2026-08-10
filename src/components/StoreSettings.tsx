@@ -304,12 +304,6 @@ export default function StoreSettings({ catalog }: { catalog: any }) {
                     <span className="text-sm font-bold">Verificada</span>
                   </div>
                 </div>
-                <button 
-                  onClick={() => catalog.loadMassiveDemo()}
-                  className="px-6 py-3 bg-white text-black hover:scale-105 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all italic shadow-2xl shadow-white/20"
-                >
-                  Generar Datos Masivos
-                </button>
               </div>
             </div>
           </div>

@@ -1,0 +1,41 @@
+{
+  "schema": {
+    "catalogs": {
+      "__doc__": {
+        "fields": {
+          "id": "string",
+          "name": "string",
+          "categories": "array"
+        }
+      }
+    },
+    "users": {
+      "__doc__": {
+        "fields": {
+          "id": "string",
+          "name": "string",
+          "role": "string",
+          "email": "string",
+          "createdAt": "timestamp"
+        }
+      }
+    },
+    "products": {
+      "__doc__": {
+        "fields": {
+          "id": "string",
+          "name": "string",
+          "sku": "string",
+          "price": "number",
+          "image": "string",
+          "description": "string",
+          "categoryId": "string",
+          "subcategoryId": "string",
+          "modelId": "string",
+          "submodelId": "string",
+          "createdAt": "timestamp"
+        }
+      }
+    }
+  }
+}
