@@ -12,6 +12,21 @@ import { db } from '../firebase';
 import { doc, setDoc, onSnapshot } from 'firebase/firestore';
 import localforage from 'localforage';
 
+import { 
+  loadFromDb, 
+  saveProductToDb, 
+  deleteProductFromDb, 
+  saveCategoriesToDb, 
+  saveOrderToDb, 
+  deleteOrderFromDb, 
+  saveCustomerToDb, 
+  deleteCustomerFromDb, 
+  saveUserToDb, 
+  deleteUserFromDb,
+  massiveSyncToDb 
+} from '../dbSync';
+
+
 const STORAGE_KEY = "catalogo_pro_local_v3"; // Bumped version to force reset for user data as requested
 
 const starterData: CatalogData = {
@@ -122,9 +137,26 @@ export function useCatalog() {
     }
   }, [currentUser, activeUser]);
 
+  
   useEffect(() => {
-    addLog('SATOSHIMPORT v1.0: Conexión con inventario establecida.', 'success');
+    const initDb = async () => {
+      addLog('Conectando a Firebase Cloud (Firestore)...', 'process');
+      const dbData = await loadFromDb();
+      if (dbData) {
+        // Sync memory with cloud
+        setData(dbData);
+        addLog('Base de datos sincronizada desde la nube.', 'success');
+      } else {
+        addLog('No se encontraron datos en la nube. Usando estado local.', 'warn');
+        // If local data exists, sync it up
+        if (data.categories.length > 0) {
+           massiveSyncToDb(data).catch(console.error);
+        }
+      }
+    };
+    initDb();
   }, []);
+
 
   const login = (email: string, password?: string) => {
     const user = data.users.find(u => 
@@ -449,7 +481,7 @@ export function useCatalog() {
     }
   };
 
-  const addProduct = (submodelId: string, productData: Omit<Product, 'id' | 'createdAt'>) => {
+  const addProduct = async (submodelId: string, productData: Omit<Product, 'id' | 'createdAt'>) => {
     const newProduct: Product = {
       ...productData,
       id: uid(),
@@ -574,7 +606,7 @@ export function useCatalog() {
     addLog(`Producto eliminado temporalmente de la vista local.`, 'warn');
   };
 
-  const addOrder = (orderData: Omit<Order, 'id' | 'createdAt' | 'updatedAt'>) => {
+  const addOrder = async (orderData: Omit<Order, 'id' | 'createdAt' | 'updatedAt'>) => {
     const newOrder: Order = {
       ...orderData,
       id: 'ORD-' + Math.random().toString(36).substr(2, 6).toUpperCase(),
@@ -596,7 +628,7 @@ export function useCatalog() {
     }));
   };
 
-  const deleteOrder = (orderId: string) => {
+  const deleteOrder = async (orderId: string) => {
     setData(prev => ({
       ...prev,
       orders: prev.orders.filter(o => o.id !== orderId)
@@ -610,14 +642,14 @@ export function useCatalog() {
     }));
   };
 
-  const deleteCustomer = (customerId: string) => {
+  const deleteCustomer = async (customerId: string) => {
     setData(prev => ({
       ...prev,
       customers: prev.customers.filter(c => c.id !== customerId)
     }));
   };
 
-  const addUser = (userData: Omit<User, 'id' | 'createdAt'>) => {
+  const addUser = async (userData: Omit<User, 'id' | 'createdAt'>) => {
     const newUser: User = {
       ...userData,
       id: uid(),
@@ -636,7 +668,7 @@ export function useCatalog() {
     }));
   };
 
-  const deleteUser = (userId: string) => {
+  const deleteUser = async (userId: string) => {
     setData(prev => ({
       ...prev,
       users: prev.users.filter(u => u.id !== userId)
@@ -704,7 +736,7 @@ export function useCatalog() {
     setSelectedSubmodelId(null);
   };
 
-  const loadMassiveDemo = () => {
+  const loadMassiveDemo = async () => {
     try {
       addLog('Iniciando generación masiva de datos (Productos/Clientes/Órdenes)...', 'process');
       const demoData: CatalogData = JSON.parse(JSON.stringify(starterData));
@@ -787,6 +819,7 @@ export function useCatalog() {
 
       setData(demoData);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(demoData));
+      await massiveSyncToDb(demoData);
       addLog('Carga masiva completada exitosamente. 50 órdenes generadas.', 'success');
 
       if (demoData.categories[0]) {
@@ -854,7 +887,7 @@ export function useCatalog() {
   };
 
 
-  const updateStoreSettings = (newSettings: any) => {
+  const updateStoreSettings = async (newSettings: any) => {
     setData(prev => ({
       ...prev,
       storeSettings: {
@@ -869,6 +902,7 @@ export function useCatalog() {
         ...newSettings
       }
     }));
+    saveCategoriesToDb(data.categories, newSettings).catch(console.error);
     addLog('Ajustes globales actualizados exitosamente.', 'success');
   };
   return {

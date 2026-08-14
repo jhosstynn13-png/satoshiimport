@@ -1,7 +1,6 @@
 const fs = require('fs');
 let code = fs.readFileSync('src/components/Catalog.tsx', 'utf8');
 
-// Replace handleBulkUpload
 const newBulkUpload = `
     const handleBulkUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -22,33 +21,35 @@ const newBulkUpload = `
         
         const uploadPromises = batch.map(async (file: File) => {
           try {
-            // Comprimir la imagen antes de subirla
             const compressedBlob = await compressImage(file);
-            const safeName = file.name.replace(/\\.[^/.]+$/, "").replace(/[^a-zA-Z0-9-_\\s]/g, '');
             
-            // Subir a Firebase Storage
-            const storageRef = ref(storage, \`catalog_images/\${Date.now()}_\${safeName}.webp\`);
-            await uploadBytes(storageRef, compressedBlob);
-            const downloadUrl = await getDownloadURL(storageRef);
+            const reader = new FileReader();
+            const downloadUrl = await new Promise<string>((resolve, reject) => {
+               reader.onloadend = () => resolve(reader.result as string);
+               reader.onerror = reject;
+               reader.readAsDataURL(compressedBlob);
+            });
+            
+            const safeName = file.name.replace(/\\.[^/.]+$/, "").replace(/[^a-zA-Z0-9-_\\s]/g, '');
             
             newProductsData.push({
               name: safeName,
               sku: '',
-              image: downloadUrl, // URL real de Firebase en la nube
+              image: downloadUrl,
               price: 0,
               sizes: ['36', '37', '38', '39', '40', '41', '42', '43', '44'],
               description: '',
               status: 'active'
             });
           } catch (error) {
-            console.error("Error al procesar/subir archivo:", file.name, error);
+            console.error("Error al procesar archivo:", file.name, error);
           }
         });
         await Promise.all(uploadPromises);
         
         if (newProductsData.length > 0) {
           addProductsBulk(selectedSubmodelId, newProductsData);
-          newProductsData.length = 0; // vaciar para el siguiente lote
+          newProductsData.length = 0; // vaciar
         }
         
         setUploadProgress(prev => ({ ...prev, current: Math.min(prev.current + BATCH_SIZE, fileArray.length) }));
@@ -69,28 +70,7 @@ const newBulkUpload = `
 
 code = code.replace(/const handleBulkUpload = async.*?setTimeout\(\(\) => setUploadProgress\(\{ current: 0, total: 0 \}\), 2000\);\n    }\n  };/s, newBulkUpload.trim());
 
-
-// Now fix the single image upload inside the render code
-// We'll replace the onChange for the file input inside "URL SOURCE IMAGEN"
 const oldSingleUpload = `
-                      onChange={async (e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          try {
-                            const compressedBlob = await compressImage(file);
-                            const reader = new FileReader();
-                            reader.onloadend = () => {
-                              setProductForm({...productForm, image: reader.result as string});
-                            };
-                            reader.readAsDataURL(compressedBlob);
-                          } catch(err) {
-                            console.error(err);
-                          }
-                        }
-                      }}
-`;
-
-const newSingleUpload = `
                       onChange={async (e) => {
                         const file = e.target.files?.[0];
                         if (file) {
@@ -104,6 +84,24 @@ const newSingleUpload = `
                           } catch(err) {
                             console.error("Error subiendo imagen:", err);
                             alert("Error al subir imagen a la nube.");
+                          }
+                        }
+                      }}
+`;
+
+const newSingleUpload = `
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          try {
+                            const compressedBlob = await compressImage(file);
+                            const reader = new FileReader();
+                            reader.onloadend = () => {
+                              setProductForm({...productForm, image: reader.result as string});
+                            };
+                            reader.readAsDataURL(compressedBlob);
+                          } catch(err) {
+                            console.error(err);
                           }
                         }
                       }}

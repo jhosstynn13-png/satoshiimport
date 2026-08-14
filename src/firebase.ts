@@ -9,5 +9,7 @@ setLogLevel('error');
 
 const app = initializeApp(config);
 export const db = getFirestore(app, config.firestoreDatabaseId);
+
 export const auth = getAuth(app);
+
 export const storage = getStorage(app);

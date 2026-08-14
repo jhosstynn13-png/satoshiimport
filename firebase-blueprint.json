@@ -1,41 +1,81 @@
 {
-  "schema": {
-    "catalogs": {
-      "__doc__": {
-        "fields": {
-          "id": "string",
-          "name": "string",
-          "categories": "array"
-        }
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile information",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "manager", "guest"] },
+        "email": { "type": "string" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["id", "name", "role", "email"]
+    },
+    "Catalog": {
+      "title": "Catalog",
+      "description": "Store configuration and global data",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" }
       }
     },
-    "users": {
-      "__doc__": {
-        "fields": {
-          "id": "string",
-          "name": "string",
-          "role": "string",
-          "email": "string",
-          "createdAt": "timestamp"
-        }
-      }
+    "Product": {
+      "title": "Product",
+      "description": "A single product in the catalog",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string", "maxLength": 100 },
+        "sku": { "type": "string", "maxLength": 50 },
+        "price": { "type": "number" },
+        "image": { "type": "string" },
+        "description": { "type": "string", "maxLength": 1000 },
+        "categoryId": { "type": "string" },
+        "subcategoryId": { "type": "string" },
+        "modelId": { "type": "string" },
+        "submodelId": { "type": "string" },
+        "sizes": {
+            "type": "array",
+            "items": { "type": "string" }
+        },
+        "createdAt": { "type": "number" },
+        "status": { "type": "string", "enum": ["active", "paused"] }
+      },
+      "required": ["id", "name", "price"]
     },
-    "products": {
-      "__doc__": {
-        "fields": {
-          "id": "string",
-          "name": "string",
-          "sku": "string",
-          "price": "number",
-          "image": "string",
-          "description": "string",
-          "categoryId": "string",
-          "subcategoryId": "string",
-          "modelId": "string",
-          "submodelId": "string",
-          "createdAt": "timestamp"
-        }
+    "Order": {
+      "title": "Order",
+      "description": "Customer order",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "customerId": { "type": "string" },
+        "customerName": { "type": "string" },
+        "total": { "type": "number" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "number" }
       }
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": "User",
+      "description": "Users collection"
+    },
+    "products/{productId}": {
+      "schema": "Product",
+      "description": "Products collection"
+    },
+    "orders/{orderId}": {
+      "schema": "Order",
+      "description": "Orders collection"
+    },
+    "config/{docId}": {
+      "schema": "Catalog",
+      "description": "Global catalog config"
     }
   }
 }

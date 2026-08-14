@@ -1,5 +1,5 @@
 const fs = require('fs');
 let code = fs.readFileSync('src/firebase.ts', 'utf8');
-code = code.replace("import { getAuth } from 'firebase/auth';", "import { getAuth } from 'firebase/auth';\nimport { getStorage } from 'firebase/storage';");
-code = code.replace("export const auth = getAuth(app);", "export const auth = getAuth(app);\nexport const storage = getStorage(app);");
+code = code.replace("import { signInAnonymously } from 'firebase/auth';", "");
+code = code.replace("// Initialize anonymous auth for storage uploads\nsignInAnonymously(auth).catch(console.error);", "");
 fs.writeFileSync('src/firebase.ts', code);
