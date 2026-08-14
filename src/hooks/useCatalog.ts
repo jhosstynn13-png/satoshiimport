@@ -166,7 +166,18 @@ export function useCatalog() {
     if (user) {
       if (user.status === 'suspended') {
         addLog(`Intento de inicio de sesión de usuario suspendido: ${email}`, 'error');
-        return { success: false, message: 'Su cuenta ha sido suspendida por seguridad.' };
+        
+  // Sync structural changes to DB whenever categories array changes length or structure
+  // (We debounce this slightly by using a useMemo/useEffect combo, or just direct useEffect)
+  useEffect(() => {
+    // Only save if we actually have data loaded from DB (prevents overwriting on first boot before load)
+    if (data.categories.length > 0) {
+      // NOTE: saveCategoriesToDb strips products, so it's safe to pass data.categories
+      saveCategoriesToDb(data.categories, data.storeSettings).catch(console.error);
+    }
+  }, [data.categories, data.storeSettings]);
+
+  return { success: false, message: 'Su cuenta ha sido suspendida por seguridad.' };
       }
       
       if (user.role === 'client' && (data.storeSettings?.clientLoginEnabled === false || data.storeSettings?.publicAccessEnabled === false)) {
@@ -240,6 +251,13 @@ export function useCatalog() {
       createdAt: Date.now()
     };
     
+    
+    const cat = data.categories.find(c => c.subcategories.some(s => s.models.some(m => m.submodels.some(sm => sm.id === submodelId))));
+    const sub = cat?.subcategories.find(s => s.models.some(m => m.submodels.some(sm => sm.id === submodelId)));
+    const mod = sub?.models.find(m => m.submodels.some(sm => sm.id === submodelId));
+    if(cat && sub && mod) {
+       saveProductToDb(newProduct, cat.id, sub.id, mod.id, submodelId).catch(console.error);
+    }
     setData(prev => ({
       ...prev,
       users: [...prev.users, newUser]
@@ -319,11 +337,13 @@ export function useCatalog() {
 
   const addCategory = (name: string) => {
     const newCat: Category = { id: uid(), name: name.toUpperCase(), subcategories: [] };
-    setData(prev => ({ ...prev, categories: [...prev.categories, newCat] }));
+    setData(prev => ({
+      ...prev, /* NOTE: Structural sync is handled by a side effect below */  ...prev, categories: [...prev.categories, newCat] }));
   };
 
   const deleteCategory = (id: string) => {
     setData(prev => ({
+      ...prev, /* NOTE: Structural sync is handled by a side effect below */ 
       ...prev,
       categories: prev.categories.filter(c => c.id !== id)
     }));
@@ -335,6 +355,7 @@ export function useCatalog() {
 
   const addSubcategory = (categoryId: string, name: string) => {
     setData(prev => ({
+      ...prev, /* NOTE: Structural sync is handled by a side effect below */ 
       ...prev,
       categories: prev.categories.map(cat => {
         if (cat.id === categoryId) {
@@ -350,6 +371,7 @@ export function useCatalog() {
 
   const deleteSubcategory = (categoryId: string, subId: string) => {
     setData(prev => ({
+      ...prev, /* NOTE: Structural sync is handled by a side effect below */ 
       ...prev,
       categories: prev.categories.map(cat => {
         if (cat.id === categoryId) {
@@ -369,6 +391,7 @@ export function useCatalog() {
 
   const addModel = (categoryId: string, subId: string, name: string) => {
     setData(prev => ({
+      ...prev, /* NOTE: Structural sync is handled by a side effect below */ 
       ...prev,
       categories: prev.categories.map(cat => {
         if (cat.id === categoryId) {
@@ -392,6 +415,7 @@ export function useCatalog() {
 
   const deleteModel = (categoryId: string, subId: string, modelId: string) => {
     setData(prev => ({
+      ...prev, /* NOTE: Structural sync is handled by a side effect below */ 
       ...prev,
       categories: prev.categories.map(cat => {
         if (cat.id === categoryId) {
@@ -418,6 +442,7 @@ export function useCatalog() {
 
   const addSubmodel = (categoryId: string, subId: string, modelId: string, name: string) => {
     setData(prev => ({
+      ...prev, /* NOTE: Structural sync is handled by a side effect below */ 
       ...prev,
       categories: prev.categories.map(cat => {
         if (cat.id === categoryId) {
@@ -449,6 +474,7 @@ export function useCatalog() {
 
   const deleteSubmodel = (categoryId: string, subId: string, modelId: string, submodelId: string) => {
     setData(prev => ({
+      ...prev, /* NOTE: Structural sync is handled by a side effect below */ 
       ...prev,
       categories: prev.categories.map(cat => {
         if (cat.id === categoryId) {
@@ -622,6 +648,9 @@ export function useCatalog() {
 
   const updateOrder = (orderId: string, update: Partial<Order>) => {
     addLog(`Orden ${orderId} actualizada a estado: ${update.status || 'MODIFICADO'}`, 'info');
+    
+    const order = data.orders.find(o => o.id === orderId);
+    if(order) saveOrderToDb({...order, ...update, updatedAt: Date.now()}).catch(console.error);
     setData(prev => ({
       ...prev,
       orders: prev.orders.map(o => o.id === orderId ? { ...o, ...update, updatedAt: Date.now() } : o)
@@ -636,6 +665,9 @@ export function useCatalog() {
   };
 
   const updateCustomer = (customerId: string, update: Partial<Customer>) => {
+    
+    const customer = data.customers.find(c => c.id === customerId);
+    if(customer) saveCustomerToDb({...customer, ...update}).catch(console.error);
     setData(prev => ({
       ...prev,
       customers: prev.customers.map(c => c.id === customerId ? { ...c, ...update } : c)
@@ -655,6 +687,7 @@ export function useCatalog() {
       id: uid(),
       createdAt: Date.now()
     };
+    saveUserToDb(newUser).catch(console.error);
     setData(prev => ({
       ...prev,
       users: [...prev.users, newUser]
@@ -662,6 +695,9 @@ export function useCatalog() {
   };
 
   const updateUser = (userId: string, update: Partial<User>) => {
+    
+    const user = data.users.find(u => u.id === userId);
+    if(user) saveUserToDb({...user, ...update}).catch(console.error);
     setData(prev => ({
       ...prev,
       users: prev.users.map(u => u.id === userId ? { ...u, ...update } : u)
