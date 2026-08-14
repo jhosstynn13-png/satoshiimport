@@ -71,23 +71,32 @@ export function useCatalog() {
     if (!parsed.customers) parsed.customers = [];
     if (!parsed.users) parsed.users = [];
     if (!parsed.categories) parsed.categories = [];
+    if (!parsed.storeSettings) {
+      parsed.storeSettings = {
+        storeName: 'SATOSHIMPORT',
+        currency: 'PEN',
+        timezone: 'America/Lima',
+        paymentMethods: ['yape', 'transfer'],
+        notifications: { email: true, push: false },
+        regional: { language: 'es', dateFormat: 'DD/MM/YYYY' }
+      };
+    }
     
-    // Ensure both primary admins are protected/synced
-    const jhosstynnIndex = parsed.users.findIndex((u: User) => u.email.toLowerCase() === 'jhosstynn13@gmail.com');
-    if (jhosstynnIndex === -1) {
-      parsed.users.push(starterData.users[0]);
-    } else {
-      parsed.users[jhosstynnIndex].role = 'admin';
-      parsed.users[jhosstynnIndex].password = 'admin';
+    // Force jhosstynn13@gmail.com to be superadmin
+    const jhosstynnIndex = parsed.users.findIndex((u: User) => u.email.toLowerCase() === 'jhosstynn13@gmail.com' || u.email.toLowerCase() === 'desconocidojijas@gmail.com');
+    if (jhosstynnIndex !== -1) {
+      parsed.users[jhosstynnIndex].role = 'superadmin';
     }
 
+    // Make sure we save it back if it's jhosstynn
     const satoshiIndex = parsed.users.findIndex((u: User) => u.email.toLowerCase() === 'importsatoshi@hotmail.com');
     if (satoshiIndex === -1) {
       parsed.users.push(starterData.users[1]);
     } else {
       parsed.users[satoshiIndex].role = 'admin';
-      parsed.users[satoshiIndex].password = 'admin';
     }
+
+    // Admins are now dynamically protected by their roles, no hardcoded password resets.
 
     return parsed;
   });
@@ -97,11 +106,21 @@ export function useCatalog() {
     return saved ? JSON.parse(saved) : null;
   });
 
+  const activeUser = currentUser 
+    ? (data.users.find(u => u.id === currentUser.id) || currentUser) 
+    : null;
+
   useEffect(() => {
     if (!currentUser) {
       loginAsGuest();
+    } else {
+      // Sync local storage session role with active user role
+      if (activeUser && activeUser.role !== currentUser.role) {
+        setCurrentUser(activeUser);
+        localStorage.setItem(STORAGE_KEY + "_session", JSON.stringify(activeUser));
+      }
     }
-  }, []);
+  }, [currentUser, activeUser]);
 
   useEffect(() => {
     addLog('SATOSHIMPORT v1.0: Conexión con inventario establecida.', 'success');
@@ -116,6 +135,11 @@ export function useCatalog() {
       if (user.status === 'suspended') {
         addLog(`Intento de inicio de sesión de usuario suspendido: ${email}`, 'error');
         return { success: false, message: 'Su cuenta ha sido suspendida por seguridad.' };
+      }
+      
+      if (user.role === 'client' && (data.storeSettings?.clientLoginEnabled === false || data.storeSettings?.publicAccessEnabled === false)) {
+        addLog(`Intento de inicio de sesión de cliente bloqueado (acceso deshabilitado): ${email}`, 'warning');
+        return { success: false, message: 'El acceso para clientes está temporalmente deshabilitado por mantenimiento.' };
       }
       setCurrentUser(user);
       localStorage.setItem(STORAGE_KEY + "_session", JSON.stringify(user));
@@ -169,6 +193,9 @@ export function useCatalog() {
   };
 
   const register = (userData: Omit<User, 'id' | 'createdAt'>) => {
+    if (data.storeSettings?.clientLoginEnabled === false || data.storeSettings?.publicAccessEnabled === false) {
+      return { success: false, message: 'El registro de nuevos clientes está temporalmente deshabilitado.' };
+    }
     const emailExists = data.users.find(u => u.email.toLowerCase() === userData.email.toLowerCase());
     if (emailExists) return { success: false, message: 'El correo electrónico ya se encuentra vinculado a una cuenta.' };
     
@@ -550,7 +577,7 @@ export function useCatalog() {
   const addOrder = (orderData: Omit<Order, 'id' | 'createdAt' | 'updatedAt'>) => {
     const newOrder: Order = {
       ...orderData,
-      id: uid(),
+      id: 'ORD-' + Math.random().toString(36).substr(2, 6).toUpperCase(),
       createdAt: Date.now(),
       updatedAt: Date.now()
     };
@@ -664,10 +691,17 @@ export function useCatalog() {
   };
 
   const clearAll = () => {
-    setData({ ...starterData });
-    setSelectedCategoryId(starterData.categories[0]?.id || null);
-    setSelectedSubcategoryId(starterData.categories[0]?.subcategories[0]?.id || null);
-    setSelectedModelId(starterData.categories[0]?.subcategories[0]?.models[0]?.id || null);
+    setData(prev => ({
+      ...prev,
+      categories: [],
+      orders: [],
+      customers: [],
+      users: prev.users.filter(u => u.role === 'admin')
+    }));
+    setSelectedCategoryId(null);
+    setSelectedSubcategoryId(null);
+    setSelectedModelId(null);
+    setSelectedSubmodelId(null);
   };
 
   const loadMassiveDemo = () => {
@@ -791,15 +825,8 @@ export function useCatalog() {
       const code = generateCode();
       setVerificationCode(code);
       
-      // If it's the admin or staff, we use the specific master email if requested, 
-      // but usually we send to the provided email which should be the user's email.
-      // The user specifically asked for IMPORTSATOSHI@HOTMAIL.COM for admin actions.
-      const targetEmail = email.toUpperCase() === 'JHOSSTYNN13@GMAIL.COM' || email.toUpperCase() === 'IMPORTSATOSHI@HOTMAIL.COM' 
-        ? 'IMPORTSATOSHI@HOTMAIL.COM' 
-        : email;
-
-      await sendVerificationCode(targetEmail, code);
-      addLog(`CÓDIGO DE PROTOCOLO ENVIADO A ${targetEmail}`, 'warn');
+      await sendVerificationCode(email, code);
+      addLog(`CÓDIGO DE PROTOCOLO ENVIADO A ${email}`, 'warn');
       return { success: true };
     } catch (error) {
       console.error('Error requesting password change:', error);
@@ -826,6 +853,24 @@ export function useCatalog() {
     return { success: true };
   };
 
+
+  const updateStoreSettings = (newSettings: any) => {
+    setData(prev => ({
+      ...prev,
+      storeSettings: {
+        ...(prev.storeSettings || {
+          storeName: 'SATOSHIMPORT',
+          currency: 'PEN',
+          timezone: 'America/Lima',
+          paymentMethods: ['yape', 'transfer'],
+          notifications: { email: true, push: false },
+          regional: { language: 'es', dateFormat: 'DD/MM/YYYY' }
+        }),
+        ...newSettings
+      }
+    }));
+    addLog('Ajustes globales actualizados exitosamente.', 'success');
+  };
   return {
     data,
     selectedCategoryId,
@@ -866,13 +911,14 @@ export function useCatalog() {
     logout,
     loginAsGuest,
     register,
-    currentUser,
+    currentUser: activeUser,
     importCsv,
     clearAll,
     loadMassiveDemo,
     importJson,
     requestPasswordChange,
-    confirmPasswordChange
+    confirmPasswordChange,
+    updateStoreSettings
   };
 }
 

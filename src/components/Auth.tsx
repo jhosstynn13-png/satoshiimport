@@ -6,13 +6,14 @@ import { sendVerificationCode, generateCode } from '../services/emailService';
 
 interface AuthProps {
   onLogin: (email: string, password?: string) => { success: boolean; message?: string };
-  onVerifyCredentials?: (email: string, password?: string) => { success: boolean; message?: string };
+  onVerifyCredentials?: (email: string, password?: string) => { success: boolean; message?: string; user?: any };
   onRegister: (data: any) => { success: boolean; message?: string };
   onGuestLogin: () => void;
   isModal?: boolean;
+  clientLoginEnabled?: boolean;
 }
 
-export default function Auth({ onLogin, onVerifyCredentials, onRegister, onGuestLogin, isModal = false }: AuthProps) {
+export default function Auth({ onLogin, onVerifyCredentials, onRegister, onGuestLogin, isModal = false, clientLoginEnabled = true }: AuthProps) {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -35,6 +36,12 @@ export default function Auth({ onLogin, onVerifyCredentials, onRegister, onGuest
   const [sentCode, setSentCode] = useState('');
   const [tempAdminData, setTempAdminData] = useState<{email: string; password?: string} | null>(null);
   const [resendCooldown, setResendCooldown] = useState(0);
+
+  React.useEffect(() => {
+    if (!clientLoginEnabled && !isLogin) {
+      setIsLogin(true);
+    }
+  }, [clientLoginEnabled, isLogin]);
 
   React.useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -63,10 +70,7 @@ export default function Auth({ onLogin, onVerifyCredentials, onRegister, onGuest
     }
   };
 
-  const isAdminEmail = (email: string) => {
-    const adminEmail = import.meta.env.VITE_ADMIN_EMAIL || 'IMPORTSATOSHI@HOTMAIL.COM';
-    return email.trim().toUpperCase() === adminEmail.toUpperCase();
-  };
+
 
   const handleVerifyCode = (e: React.FormEvent) => {
     e.preventDefault();
@@ -93,18 +97,20 @@ export default function Auth({ onLogin, onVerifyCredentials, onRegister, onGuest
     setLoading(true);
 
     if (isLogin) {
-      // Check if it's admin login and require 2FA
-      if (isAdminEmail(email)) {
-        // First verify credentials before bothering with security code
-        if (onVerifyCredentials) {
-          const verifyRes = onVerifyCredentials(email, password);
-          if (!verifyRes.success) {
-            setError(verifyRes.message || 'Credenciales de administrador incorrectas.');
-            setLoading(false);
-            return;
-          }
+      let isUserAdmin = false;
+      if (onVerifyCredentials) {
+        const verifyRes = onVerifyCredentials(email, password);
+        if (!verifyRes.success) {
+          setError(verifyRes.message || 'Credenciales incorrectas.');
+          setLoading(false);
+          return;
         }
+        if (verifyRes.user && verifyRes.user.role === 'superadmin') {
+          isUserAdmin = true;
+        }
+      }
 
+      if (isUserAdmin) {
         try {
           const code = generateCode();
           setSentCode(code);
@@ -211,6 +217,7 @@ export default function Auth({ onLogin, onVerifyCredentials, onRegister, onGuest
         )}
 
         <div className="glass-rich rounded-[50px] p-10 border border-white/10 shadow-[0_40px_100px_rgba(0,0,0,0.5)]">
+          {clientLoginEnabled ? (
           <div className="flex bg-white/5 p-2 rounded-[24px] mb-10 overflow-hidden">
             <button 
               onClick={() => setIsLogin(true)}
@@ -225,6 +232,11 @@ export default function Auth({ onLogin, onVerifyCredentials, onRegister, onGuest
               Registro
             </button>
           </div>
+          ) : (
+          <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl mb-10 text-center">
+            <p className="text-red-400 text-xs font-bold uppercase">La tienda se encuentra en mantenimiento privado. Solo personal autorizado puede acceder en este momento.</p>
+          </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <AnimatePresence mode="wait">

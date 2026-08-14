@@ -153,7 +153,7 @@ export default function UserProfile({ catalog }: { catalog: any }) {
                     >
                       <div className="flex items-center gap-6">
                         <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center text-white/40 font-mono text-xs">
-                          #{order.id.slice(-4).toUpperCase()}
+                          #{order.id.toUpperCase()}
                         </div>
                         <div>
                           <p className="text-sm font-black uppercase italic tracking-wider">

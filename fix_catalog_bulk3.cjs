@@ -1,0 +1,132 @@
+const fs = require('fs');
+let code = fs.readFileSync('src/components/Catalog.tsx', 'utf8');
+
+const targetFunc = `  const handleBulkUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    if (!selectedSubmodelId) return alert("Selecciona un sub-modelo primero");
+
+    const fileArray = Array.from(files);
+    
+    setIsUploading(true);
+    setUploadProgress({ current: 0, total: fileArray.length });
+
+    // Lotes más pequeños para no congelar la memoria del navegador con miles de Canvas
+    const BATCH_SIZE = 5;
+    for (let i = 0; i < fileArray.length; i += BATCH_SIZE) {
+      const batch = fileArray.slice(i, i + BATCH_SIZE);
+      
+      const newProductsData: any[] = [];
+      const uploadPromises = batch.map(async (file: File) => {
+        try {
+          // 1. Comprimir imagen en el lado del cliente (Ahorra un 95% de tamaño)
+          const compressedBlob = await compressImage(file);
+          
+          // 2. Subir a Firebase Storage con extensión .webp
+          const safeName = file.name.replace(/\\.[^/.]+$/, "").replace(/[^a-zA-Z0-9-_s]/g, '');
+          const storageRef = ref(storage, \`productos/\${Date.now()}_\${safeName}.webp\`);
+          await uploadBytes(storageRef, compressedBlob);
+          const downloadUrl = await getDownloadURL(storageRef);
+          
+          // 3. Crear data del producto
+          newProductsData.push({
+            name: safeName,
+            sku: '',
+            image: downloadUrl,
+            price: 0,
+            sizes: ['36', '37', '38', '39', '40', '41', '42', '43', '44'],
+            description: '',
+            status: 'active'
+          });
+        } catch (error) {
+          console.error("Error al procesar archivo:", file.name, error);
+        }
+      });
+      await Promise.all(uploadPromises);
+      
+      // Guardar el lote en el estado local
+      if (newProductsData.length > 0) {
+        addProductsBulk(selectedSubmodelId, newProductsData);
+      }
+      
+      setUploadProgress(prev => ({ ...prev, current: Math.min(prev.current + BATCH_SIZE, fileArray.length) }));
+      
+      // Pequeña pausa (throttle) para evitar errores 429 Too Many Requests de Firebase
+      if (i + BATCH_SIZE < fileArray.length) {
+        await new Promise(resolve => setTimeout(resolve, 500)); 
+      }
+    }
+
+    setIsUploading(false);
+    e.target.value = '';
+  };`;
+
+const replacementFunc = `  const handleBulkUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    if (!selectedSubmodelId) return alert("Selecciona un sub-modelo primero");
+
+    const fileArray = Array.from(files);
+    
+    setIsUploading(true);
+    setUploadProgress({ current: 0, total: fileArray.length });
+
+    const BATCH_SIZE = 5;
+    try {
+      for (let i = 0; i < fileArray.length; i += BATCH_SIZE) {
+        const batch = fileArray.slice(i, i + BATCH_SIZE);
+        
+        const newProductsData: any[] = [];
+        const uploadPromises = batch.map(async (file: File) => {
+          try {
+            const compressedBlob = await compressImage(file);
+            
+            const reader = new FileReader();
+            const downloadUrl = await new Promise<string>((resolve, reject) => {
+               reader.onloadend = () => resolve(reader.result as string);
+               reader.onerror = reject;
+               reader.readAsDataURL(compressedBlob);
+            });
+            
+            const safeName = file.name.replace(/\\.[^/.]+$/, "").replace(/[^a-zA-Z0-9-_\\s]/g, '');
+            
+            newProductsData.push({
+              name: safeName,
+              sku: '',
+              image: downloadUrl,
+              price: 0,
+              sizes: ['36', '37', '38', '39', '40', '41', '42', '43', '44'],
+              description: '',
+              status: 'active'
+            });
+          } catch (error) {
+            console.error("Error al procesar archivo:", file.name, error);
+          }
+        });
+        await Promise.all(uploadPromises);
+        
+        if (newProductsData.length > 0) {
+          addProductsBulk(selectedSubmodelId, newProductsData);
+        }
+        
+        setUploadProgress(prev => ({ ...prev, current: Math.min(prev.current + BATCH_SIZE, fileArray.length) }));
+        
+        if (i + BATCH_SIZE < fileArray.length) {
+          await new Promise(resolve => setTimeout(resolve, 50)); 
+        }
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsUploading(false);
+      e.target.value = '';
+    }
+  };`;
+
+if (code.includes(targetFunc)) {
+  code = code.replace(targetFunc, replacementFunc);
+  fs.writeFileSync('src/components/Catalog.tsx', code);
+  console.log("Success replacing handleBulkUpload");
+} else {
+  console.log("Failed to find handleBulkUpload target");
+}

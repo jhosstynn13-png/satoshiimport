@@ -21,7 +21,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
   showControls = true, 
   isPublic = false 
 }) => {
-  const [selectedSize, setSelectedSize] = useState<string | null>(null);
+  const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
   
   const displaySizes = isPublic && product.sizes && product.sizes.length > 0 
     ? [...product.sizes, 'Otros'] 
@@ -82,10 +82,10 @@ const ProductCard: React.FC<ProductCardProps> = ({
               {displaySizes.map(size => (
                 <button 
                   key={size}
-                  onClick={() => isPublic && setSelectedSize(size)}
+                  onClick={() => { if (isPublic) setSelectedSizes(prev => prev.includes(size) ? prev.filter(s => s !== size) : [...prev, size]) }}
                   disabled={!isPublic}
                   className={`px-1.5 py-0.5 border rounded text-[8px] font-black transition-all ${
-                    selectedSize === size 
+                    selectedSizes.includes(size) 
                       ? 'bg-white text-black border-white shadow-[0_0_10px_rgba(255,255,255,0.5)]' 
                       : `bg-white/5 border-white/5 text-white/50 ${isPublic ? "hover:bg-white/20 hover:text-white cursor-pointer" : ""}`
                   }`}
@@ -108,12 +108,16 @@ const ProductCard: React.FC<ProductCardProps> = ({
           {isPublic ? (
             <button 
               onClick={() => {
-                if (displaySizes.length > 0 && !selectedSize) {
+                if (displaySizes.length > 0 && selectedSizes.length === 0) {
                   alert('Por favor selecciona una talla antes de añadir al carrito.');
                   return;
                 }
-                onAddToCart?.(product, selectedSize || undefined);
-                setSelectedSize(null);
+                if (displaySizes.length === 0) {
+                  onAddToCart?.(product);
+                } else {
+                  selectedSizes.forEach(s => onAddToCart?.(product, s));
+                }
+                setSelectedSizes([]);
               }}
               disabled={!onAddToCart}
               className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 cursor-pointer shadow-lg ${

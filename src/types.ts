@@ -11,6 +11,7 @@ export interface Product {
   price: number;
   description: string;
   createdAt: number;
+  tags?: string[];
   sizes: string[];
   status: 'active' | 'discontinued';
   isFavorite?: boolean;
@@ -52,6 +53,7 @@ export interface Customer {
   totalSpent: number;
   lastOrderDate: number;
   createdAt: number;
+  tags?: string[];
 }
 
 export interface OrderItem {
@@ -93,10 +95,11 @@ export interface Order {
     tel: string;
   };
   createdAt: number;
+  tags?: string[];
   updatedAt: number;
 }
 
-export type UserRole = 'admin' | 'client' | 'guest' | 'staff';
+export type UserRole = 'superadmin' | 'admin' | 'client' | 'guest' | 'staff';
 
 export interface User {
   id: string;
@@ -111,15 +114,37 @@ export interface User {
   password?: string;
   role: UserRole;
   createdAt: number;
+  tags?: string[];
   lastLogin?: number;
   status?: 'active' | 'suspended';
 }
 
 export type View = 'dashboard' | 'catalog' | 'orders' | 'customers' | 'bulk' | 'backup' | 'settings' | 'users';
 
+
+export interface StoreSettings {
+  storeName: string;
+  logo?: string;
+  clientLoginEnabled?: boolean;
+  publicAccessEnabled?: boolean;
+  currency: string;
+  timezone: string;
+  paymentMethods: string[];
+  notifications: {
+    email: boolean;
+    push: boolean;
+  };
+  regional: {
+    language: string;
+    dateFormat: string;
+  };
+}
+
 export interface CatalogData {
   categories: Category[];
   orders: Order[];
   customers: Customer[];
   users: User[];
+  storeSettings?: StoreSettings;
 }
+

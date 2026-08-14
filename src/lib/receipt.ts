@@ -29,7 +29,7 @@ export function generateReceiptText(order: Order, user: User | null): string {
                       SATOSHIMPORT
 ==========================================================
                BOLETA DE VENTA ELECTRÓNICA
-                     Nro: SAT-${order.id.slice(-7).toUpperCase()}
+                     Nro: SAT-${order.id.toUpperCase()}
 ==========================================================
 FECHA DE EMISIÓN: ${formattedDate}
 ==========================================================
@@ -71,7 +71,7 @@ export function downloadReceipt(order: Order, user: User | null) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.download = `boleta-satoshimport-${order.id.slice(-7).toUpperCase()}.txt`;
+  link.download = `boleta-satoshimport-${order.id.toUpperCase()}.txt`;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);

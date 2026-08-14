@@ -45,3 +45,9 @@
 .orb {
   @apply absolute rounded-full blur-[100px] pointer-events-none opacity-30 animate-pulse;
 }
+
+@media (min-width: 1024px) {
+  html {
+    zoom: 0.7; /* 75% for a bit better legibility while maintaining the zoomed-out feel */
+  }
+}

@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ShoppingCart, Clock, CheckCircle, XCircle, Eye, Truck, RotateCcw, ChevronDown, TrendingUp, Package, User, Hash, Calendar, DollarSign, Filter, Box, ShieldCheck, CreditCard, Receipt, FileText, ClipboardList } from 'lucide-react';
+import { Search, ShoppingCart, Clock, CheckCircle, XCircle, Eye, Truck, RotateCcw, ChevronDown, TrendingUp, Package, User, Hash, Calendar, DollarSign, Filter, Box, ShieldCheck, CreditCard, Receipt, FileText, ClipboardList } from 'lucide-react';
 import { Order, OrderStatus, PaymentMethod, BillingType } from '../types';
 
-export default function Orders({ catalog }: { catalog: any }) {
+export default function Orders({ catalog, searchQuery = '' }: { catalog: any, searchQuery?: string }) {
   const { data, updateOrder, deleteOrder, currentUser } = catalog;
   const orders = data.orders || [];
   const isAdmin = currentUser?.role === 'admin';
   const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set());
+  const [confirmDeleteOrderId, setConfirmDeleteOrderId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<OrderStatus | 'all'>('all');
 
   const toggleOrder = (orderId: string) => {
@@ -43,10 +44,19 @@ export default function Orders({ catalog }: { catalog: any }) {
 
   const filteredOrders = orders
     .filter((o: Order) => statusFilter === 'all' || o.status === statusFilter)
+    .filter((o: Order) => {
+      if (!searchQuery) return true;
+      const term = searchQuery.toLowerCase();
+      return (
+        o.id.toLowerCase().includes(term) ||
+        o.customerName.toLowerCase().includes(term) ||
+        (o.shippingDetails?.tel && o.shippingDetails.tel.includes(term))
+      );
+    })
     .sort((a: Order, b: Order) => b.createdAt - a.createdAt);
 
   return (
-    <div className="space-y-12">
+    <div className="space-y-12 flex flex-col h-full">
       {/* Metrics Grid */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         {[
@@ -74,8 +84,8 @@ export default function Orders({ catalog }: { catalog: any }) {
       </div>
 
       {/* Main Table Interface */}
-      <div className="glass rounded-[60px] overflow-hidden border-white/5 shadow-3xl">
-        <div className="p-10 border-b border-white/5 bg-white/5 flex flex-col md:flex-row md:items-center justify-between gap-8">
+      <div className="glass rounded-[60px] overflow-hidden border-white/5 shadow-3xl flex-1 flex flex-col">
+        <div className="p-10 border-b border-white/5 bg-white/5 shrink-0 flex flex-col md:flex-row md:items-center justify-between gap-8">
            <div>
               <h3 className="text-2xl font-black uppercase italic tracking-tighter">Gestión de Logística</h3>
               <p className="text-[10px] text-white/50 font-black uppercase tracking-widest mt-1">Control de despacho y estados en tiempo real</p>
@@ -101,7 +111,7 @@ export default function Orders({ catalog }: { catalog: any }) {
            </div>
         </div>
         
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto overflow-y-auto flex-1 custom-scrollbar">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="text-[10px] uppercase font-black tracking-[0.3em] text-white/40 border-b border-white/5">
@@ -126,7 +136,7 @@ export default function Orders({ catalog }: { catalog: any }) {
                           <Hash size={14} />
                         </div>
                         <div>
-                          <div className="font-mono text-white/80 text-xs mb-1 font-bold">#{order.id.slice(-8).toUpperCase()}</div>
+                          <div className="font-mono text-white/80 text-xs mb-1 font-bold">#{order.id.toUpperCase()}</div>
                           <div className="flex items-center gap-2 text-[8px] font-black text-white/40 uppercase">
                             <Calendar size={10} />
                             {new Date(order.createdAt).toLocaleDateString()} • {new Date(order.createdAt).toLocaleTimeString()}
@@ -194,20 +204,34 @@ export default function Orders({ catalog }: { catalog: any }) {
                       </div>
                     </td>
                     <td className="px-10 py-8 text-right">
-                      <div className="flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-all">
-                        <button 
-                          onClick={() => toggleOrder(order.id)}
-                          className={`p-4 rounded-2xl transition-all shadow-xl ${isExpanded ? 'bg-white text-black' : 'bg-white/5 hover:bg-white/10 text-white'}`}
-                        >
-                          <Eye size={18} />
-                        </button>
-                        {isAdmin && (
-                          <button 
-                            onClick={() => { if(confirm('¿Revocar pedido permanentemente?')) deleteOrder(order.id); }}
-                            className="p-4 bg-white/5 hover:bg-rose-600 hover:text-white rounded-2xl transition-all shadow-xl"
-                          >
-                            <XCircle size={18} />
-                          </button>
+                      <div className="flex items-center justify-end gap-3 transition-all">
+                        {confirmDeleteOrderId === order.id ? (
+                          <div className="flex items-center gap-2">
+                            <button onClick={() => setConfirmDeleteOrderId(null)} className="px-3 py-2 text-[10px] uppercase font-black bg-white/10 hover:bg-white/20 rounded-lg">Cancelar</button>
+                            <button onClick={() => {
+                              deleteOrder(order.id);
+                              setConfirmDeleteOrderId(null);
+                            }} className="px-3 py-2 text-[10px] uppercase font-black bg-rose-600 hover:bg-rose-500 text-white rounded-lg">
+                              Eliminar
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-all">
+                            <button 
+                              onClick={() => toggleOrder(order.id)}
+                              className={`p-4 rounded-2xl transition-all shadow-xl ${isExpanded ? 'bg-white text-black' : 'bg-white/5 hover:bg-white/10 text-white'}`}
+                            >
+                              <Eye size={18} />
+                            </button>
+                            {isAdmin && (
+                              <button 
+                                onClick={() => setConfirmDeleteOrderId(order.id)}
+                                className="p-4 bg-white/5 hover:bg-rose-600 hover:text-white rounded-2xl transition-all shadow-xl"
+                              >
+                                <XCircle size={18} />
+                              </button>
+                            )}
+                          </div>
                         )}
                       </div>
                     </td>

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   User, 
   MapPin, 
@@ -10,7 +10,43 @@ import {
   Send
 } from 'lucide-react';
 
-export default function PublicContact() {
+export default function PublicContact({ catalog }: { catalog?: any }) {
+  const [nombre, setNombre] = useState('');
+  const [apellidos, setApellidos] = useState('');
+  const [departamento, setDepartamento] = useState('');
+  const [mensaje, setMensaje] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const isGuest = !catalog?.currentUser || catalog.currentUser.id === 'guest';
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isGuest) {
+      if (catalog?.onShowAuth) catalog.onShowAuth();
+      return;
+    }
+    
+    if (!nombre || !apellidos || !mensaje) {
+      alert('Por favor completa los campos requeridos.');
+      return;
+    }
+
+    const subject = encodeURIComponent(`Atención Personalizada: ${nombre} ${apellidos}`);
+    const body = encodeURIComponent(
+      `Nombre: ${nombre} ${apellidos}\n` +
+      `Departamento: ${departamento}\n\n` +
+      `Mensaje:\n${mensaje}`
+    );
+    
+    window.location.href = `mailto:IMPORTSATOSHI@HOTMAIL.COM?subject=${subject}&body=${body}`;
+    
+    // Limpiar formulario tras unos segundos si se desea
+    setNombre('');
+    setApellidos('');
+    setDepartamento('');
+    setMensaje('');
+  };
+
   return (
     <div className="min-h-screen bg-black font-sans text-white selection:bg-white selection:text-black flex flex-col overflow-x-hidden py-4">
       
@@ -113,22 +149,22 @@ export default function PublicContact() {
               </h1>
             </div>
             
-            <form className="flex flex-col gap-4 relative z-10" onSubmit={(e) => e.preventDefault()}>
+            <form className="flex flex-col gap-4 relative z-10" onSubmit={handleSubmit}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="flex flex-col group">
                   <label className="text-[9px] font-bold text-white/40 tracking-[0.1em] uppercase mb-1 ml-4">Nombre // Req</label>
-                  <input type="text" className="px-5 py-3 rounded-[15px] border border-white/20 bg-white/10 focus:outline-none focus:bg-white/20 text-white placeholder-white/30 font-mono text-xs transition-all uppercase" placeholder="INGRESAR_NOMBRE" />
+                  <input type="text" className="px-5 py-3 rounded-[15px] border border-white/20 bg-white/10 focus:outline-none focus:bg-white/20 text-white placeholder-white/30 font-mono text-xs transition-all uppercase" placeholder="INGRESAR_NOMBRE" value={nombre} onChange={e => setNombre(e.target.value)} required />
                 </div>
                 <div className="flex flex-col group">
                   <label className="text-[9px] font-bold text-white/40 tracking-[0.1em] uppercase mb-1 ml-4">Apellidos // Req</label>
-                  <input type="text" className="px-5 py-3 rounded-[15px] border border-white/20 bg-white/10 focus:outline-none focus:bg-white/20 text-white placeholder-white/30 font-mono text-xs transition-all uppercase" placeholder="INGRESAR_APELLIDOS" />
+                  <input type="text" className="px-5 py-3 rounded-[15px] border border-white/20 bg-white/10 focus:outline-none focus:bg-white/20 text-white placeholder-white/30 font-mono text-xs transition-all uppercase" placeholder="INGRESAR_APELLIDOS" value={apellidos} onChange={e => setApellidos(e.target.value)} required />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="flex flex-col">
                   <label className="text-[9px] font-bold text-white/40 tracking-[0.1em] uppercase mb-1 ml-4">Departamento</label>
-                  <input type="text" className="px-5 py-3 rounded-[15px] border border-white/20 bg-white/10 focus:outline-none focus:bg-white/20 text-white placeholder-white/30 font-mono text-xs transition-all uppercase" placeholder="LIMA_CUZCO..." />
+                  <input type="text" className="px-5 py-3 rounded-[15px] border border-white/20 bg-white/10 focus:outline-none focus:bg-white/20 text-white placeholder-white/30 font-mono text-xs transition-all uppercase" placeholder="LIMA_CUZCO..." value={departamento} onChange={e => setDepartamento(e.target.value)} />
                 </div>
                 <div className="flex flex-col">
                   <label className="text-[9px] font-bold text-white/40 tracking-[0.1em] uppercase mb-1 ml-4">Adjuntar // Imagen</label>
@@ -144,12 +180,12 @@ export default function PublicContact() {
 
               <div className="flex flex-col">
                 <label className="text-[9px] font-bold text-white/40 tracking-[0.1em] uppercase mb-1 ml-4">Mensaje // Payload</label>
-                <textarea rows={3} className="px-5 py-4 rounded-[15px] border border-white/20 bg-white/10 focus:outline-none focus:bg-white/20 text-white placeholder-white/30 font-mono text-xs resize-none transition-all uppercase" placeholder="MENSAJE..."></textarea>
+                <textarea rows={3} className="px-5 py-4 rounded-[15px] border border-white/20 bg-white/10 focus:outline-none focus:bg-white/20 text-white placeholder-white/30 font-mono text-xs resize-none transition-all uppercase" placeholder="MENSAJE..." value={mensaje} onChange={e => setMensaje(e.target.value)} required></textarea>
               </div>
 
               <div className="flex justify-end mt-2">
                 <button type="submit" className="bg-white text-black font-black text-xs uppercase tracking-[0.2em] py-4 px-10 rounded-full hover:bg-gray-200 transition-all active:scale-95 w-full sm:w-auto shadow-sm">
-                  Transmitir Datos
+                  {isGuest ? 'INICIAR SESIÓN PARA ENVIAR' : 'TRANSMITIR DATOS'}
                 </button>
               </div>
             </form>

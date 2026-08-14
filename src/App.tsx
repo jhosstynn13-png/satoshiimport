@@ -46,30 +46,29 @@ const LogoRaw = () => (
 
 // Improved Logo based on the user provided image - Stylized Geometric "S"
 const GSLogo = () => (
-  <img 
-    src="https://yimuttzzvijmvlxqleor.supabase.co/storage/v1/object/public/productos/LOGO_SECO%20(1).png" 
-    alt="Logo SATOSHIMPORT" 
-    className="w-full h-full object-contain p-1"
-  />
+  <div className="w-full h-full flex items-center justify-center font-black text-black text-2xl italic">
+    S
+  </div>
 );
 
 export default function App() {
   const [currentView, setCurrentView] = useState<View>('dashboard');
   const [searchQuery, setSearchQuery] = useState('');
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [viewMode, setViewMode] = useState<'admin' | 'client'>('admin');
   
   const catalog = useCatalog();
   const { currentUser, login, logout, register, loginAsGuest } = catalog;
 
   const navItems = [
-    { id: 'dashboard', label: 'Resumen', icon: LayoutDashboard, roles: ['admin'] },
+    { id: 'dashboard', label: 'Resumen', icon: LayoutDashboard, roles: ['admin', 'superadmin'] },
     { id: 'catalog', label: 'Productos', icon: Package },
-    // { id: 'orders', label: 'Pedidos', icon: ShoppingCart, roles: ['admin'] },
-    { id: 'customers', label: 'Clientes', icon: Users, roles: ['admin'] },
-    { id: 'users', label: 'Roles', icon: Shield, roles: ['admin'] },
-    // { id: 'bulk', label: 'Importar', icon: UploadCloud, roles: ['admin'] },
-    { id: 'backup', label: 'Cloud Local', icon: Database, roles: ['admin'] },
-    { id: 'settings', label: 'Ajustes', icon: Settings, roles: ['admin'] },
+    { id: 'orders', label: 'Pedidos', icon: ShoppingCart, roles: ['admin', 'superadmin'] },
+    { id: 'customers', label: 'Clientes', icon: Users, roles: ['admin', 'superadmin'] },
+    { id: 'users', label: 'Roles', icon: Shield, roles: ['admin', 'superadmin'] },
+    // { id: 'bulk', label: 'Importar', icon: UploadCloud, roles: ['admin', 'superadmin'] },
+    { id: 'backup', label: 'Cloud Local', icon: Database, roles: ['admin', 'superadmin'] },
+    { id: 'settings', label: 'Ajustes', icon: Settings, roles: ['admin', 'superadmin'] },
   ];
 
   const filteredNavItems = navItems.filter(item => 
@@ -88,13 +87,21 @@ export default function App() {
   };
 
   // Logic: If Admin -> show Dashboard. If Guest or Client -> show Public Layout
-  if (!currentUser || currentUser.role === 'client' || currentUser.role === 'guest') {
+  if (!currentUser || currentUser.role === 'client' || currentUser.role === 'guest' || viewMode === 'client') {
     return (
       <>
         <PublicLayout 
           catalog={catalog} 
           onShowAuth={() => setShowAuthModal(true)} 
         />
+        {(currentUser?.role === 'admin' || currentUser?.role === 'superadmin') && (
+          <button 
+             onClick={() => setViewMode('admin')}
+             className="fixed bottom-6 left-6 z-50 px-6 py-3 bg-black text-white font-black rounded-full shadow-2xl border border-white/10 uppercase tracking-widest text-[10px]"
+          >
+             Volver al Panel Master
+          </button>
+        )}
         <AnimatePresence>
           {showAuthModal && (
             <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
@@ -112,6 +119,7 @@ export default function App() {
                 className="relative z-10 w-full max-w-xl"
               >
                 <Auth 
+                  clientLoginEnabled={catalog.data.storeSettings?.clientLoginEnabled !== false && catalog.data.storeSettings?.publicAccessEnabled !== false}
                   onLogin={(email, password) => { 
                     const res = login(email, password);
                     if (res.success) setShowAuthModal(false);
@@ -135,20 +143,33 @@ export default function App() {
   }
 
   return (
-    <div className="flex min-h-screen relative overflow-hidden bg-black selection:bg-white selection:text-black">
+    <div className="flex absolute inset-0 overflow-hidden bg-black selection:bg-white selection:text-black">
       {/* Background Orbs */}
       <div className="orb w-[600px] h-[600px] bg-white/5 -top-[10%] -left-[5%]" style={{ animationDuration: '15s' }} />
       <div className="orb w-[500px] h-[500px] bg-white/5 -bottom-[10%] -right-[5%]" style={{ animationDuration: '20s' }} />
 
       {/* Sidebar */}
-      <aside className="w-72 glass h-screen sticky top-0 flex flex-col p-8 z-20 rounded-r-[48px] border-l-0 shadow-[20px_0_40px_rgba(0,0,0,0.5)]">
-        <div className="flex items-center gap-4 mb-12 px-2">
-          <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center shadow-[0_0_20px_rgba(255,255,255,0.2)]">
-            <GSLogo />
-          </div>
-          <div>
-            <h1 className="font-black text-2xl tracking-tighter text-white uppercase italic">SATOSHIMPORT</h1>
-            <p className="text-[10px] text-white/50 uppercase tracking-[0.3em] font-black">Management Portal</p>
+      <aside className="w-72 glass h-full flex flex-col p-8 z-20 rounded-r-[48px] border-l-0 shadow-[20px_0_40px_rgba(0,0,0,0.5)] shrink-0">
+        <div className="mb-12">
+          <div className="bg-white rounded-[28px] p-4 flex items-center gap-4 shadow-[0_0_40px_rgba(255,255,255,0.15)] relative overflow-hidden group hover:scale-[1.02] transition-transform duration-500 cursor-pointer">
+            <div className="absolute inset-0 bg-gradient-to-r from-black/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+            {catalog.data.storeSettings?.logo ? (
+              <div className="w-12 h-12 flex items-center justify-center shrink-0 relative z-10">
+                <img src={catalog.data.storeSettings.logo} alt="Logo" className="max-w-full max-h-full object-contain" />
+              </div>
+            ) : (
+              <div className="w-12 h-12 flex items-center justify-center shrink-0 relative z-10">
+                <GSLogo />
+              </div>
+            )}
+            <div className="flex-1 min-w-0 relative z-10">
+              <h1 className="font-black text-[22px] tracking-tighter text-black uppercase truncate leading-none pt-1">
+                {catalog.data.storeSettings?.storeName || 'SATOSHIMPORT'}
+              </h1>
+              <p className="text-[7.5px] text-black/40 uppercase tracking-[0.25em] font-black mt-1.5 truncate">
+                Management Portal
+              </p>
+            </div>
           </div>
         </div>
 
@@ -196,20 +217,12 @@ export default function App() {
             </button>
           </div>
           
-          <div className="p-6 rounded-3xl bg-white/5 border border-white/5 text-xs group hover:bg-white/[0.07] transition-all">
-            <p className="text-white/50 mb-3 uppercase tracking-[0.2em] font-black">Sync Mode</p>
-            <div className="h-1 w-full bg-white/10 rounded-full mb-4 overflow-hidden">
-              <div className="h-full w-[100%] bg-white animate-pulse"></div>
-            </div>
-            <p className="text-white/70 leading-relaxed font-medium italic">
-              Local Storage Active.
-            </p>
-          </div>
+
         </div>
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col min-w-0 relative z-10">
+      <main className="flex-1 flex flex-col h-full min-w-0 relative z-10">
         {/* Header */}
         <header className="h-32 px-12 flex items-center justify-between sticky top-0 bg-black/60 backdrop-blur-xl z-30 border-b border-white/5">
           <div>
@@ -225,13 +238,35 @@ export default function App() {
                 placeholder="Global Search..."
                 value={searchQuery}
                 onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  if (currentView !== 'catalog' && e.target.value) setCurrentView('catalog');
+                  const val = e.target.value;
+                  setSearchQuery(val);
+                  if (val) {
+                    const upperVal = val.toUpperCase();
+                    if (upperVal.startsWith('ORD-')) {
+                      setCurrentView('orders');
+                      return;
+                    }
+                    
+                    const isCatalogMatch = catalog.allProducts?.some(p => p.name.toUpperCase().includes(upperVal) || p.sku.toUpperCase().includes(upperVal));
+                    const isCustomerMatch = catalog.data.customers?.some(c => c.name.toUpperCase().includes(upperVal) || c.email.toUpperCase().includes(upperVal));
+                    const isOrderMatch = catalog.data.orders?.some(o => o.customerName.toUpperCase().includes(upperVal) || o.id.toUpperCase().includes(upperVal));
+                    
+                    if (currentView === 'catalog' && isCatalogMatch) return;
+                    if (currentView === 'customers' && isCustomerMatch) return;
+                    if (currentView === 'orders' && isOrderMatch) return;
+                    
+                    if (isCatalogMatch) setCurrentView('catalog');
+                    else if (isCustomerMatch) setCurrentView('customers');
+                    else if (isOrderMatch) setCurrentView('orders');
+                    else if (!['catalog', 'orders', 'customers', 'users'].includes(currentView)) {
+                      setCurrentView('catalog');
+                    }
+                  }
                 }}
                 className="pl-13 pr-6 py-4 bg-white/5 border border-white/5 rounded-[24px] focus:bg-white/10 outline-none w-80 text-xs font-bold transition-all placeholder:text-white/30"
               />
             </div>
-            {currentUser.role === 'admin' && (
+            {(currentUser.role === 'admin' || currentUser.role === 'superadmin') && (
               <button 
                 onClick={() => setCurrentView('catalog')}
                 className="px-8 py-4 rounded-[24px] bg-white text-black font-black transition-all shadow-[0_10px_40px_rgba(255,255,255,0.1)] hover:scale-105 active:scale-95 flex items-center gap-3 uppercase tracking-tighter text-sm"
@@ -244,7 +279,7 @@ export default function App() {
         </header>
 
         {/* View Content */}
-        <div className="p-12 pb-24 overflow-y-auto h-[calc(100vh-128px)] custom-scrollbar">
+        <div className="flex-1 p-12 overflow-y-auto custom-scrollbar">
           <AnimatePresence mode="wait">
             <motion.div
               key={currentView}
@@ -255,8 +290,8 @@ export default function App() {
             >
               {currentView === 'dashboard' && <Dashboard catalog={catalog} />}
               {currentView === 'catalog' && <Catalog catalog={catalog} searchQuery={searchQuery} />}
-              {currentView === 'orders' && <Orders catalog={catalog} />}
-              {currentView === 'customers' && <Customers catalog={catalog} />}
+              {currentView === 'orders' && <Orders catalog={catalog} searchQuery={searchQuery} />}
+              {currentView === 'customers' && <Customers catalog={catalog} searchQuery={searchQuery} />}
               {currentView === 'users' && <UsersView catalog={catalog} />}
               {currentView === 'bulk' && <BulkUpload catalog={catalog} />}
               {currentView === 'backup' && <Backup catalog={catalog} />}

@@ -156,7 +156,7 @@ export default function Catalog({ catalog, searchQuery }: CatalogProps) {
     });
   };
 
-  const handleBulkUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleBulkUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
     if (!selectedSubmodelId) return alert("Selecciona un sub-modelo primero");
@@ -166,55 +166,56 @@ export default function Catalog({ catalog, searchQuery }: CatalogProps) {
     setIsUploading(true);
     setUploadProgress({ current: 0, total: fileArray.length });
 
-    // Lotes más pequeños para no congelar la memoria del navegador con miles de Canvas
     const BATCH_SIZE = 5;
-    for (let i = 0; i < fileArray.length; i += BATCH_SIZE) {
-      const batch = fileArray.slice(i, i + BATCH_SIZE);
-      
-      const newProductsData: any[] = [];
-      const uploadPromises = batch.map(async (file: File) => {
-        try {
-          // 1. Comprimir imagen en el lado del cliente (Ahorra un 95% de tamaño)
-          const compressedBlob = await compressImage(file);
-          
-          // 2. Subir a Firebase Storage con extensión .webp
-          const safeName = file.name.replace(/\.[^/.]+$/, "").replace(/[^a-zA-Z0-9-_s]/g, '');
-          const storageRef = ref(storage, `productos/${Date.now()}_${safeName}.webp`);
-          await uploadBytes(storageRef, compressedBlob);
-          const downloadUrl = await getDownloadURL(storageRef);
-          
-          // 3. Crear data del producto
-          newProductsData.push({
-            name: safeName,
-            sku: '',
-            image: downloadUrl,
-            price: 0,
-            sizes: ['36', '37', '38', '39', '40', '41', '42', '43', '44'],
-            description: '',
-            status: 'active'
-          });
-        } catch (error) {
-          console.error("Error al procesar archivo:", file.name, error);
+    try {
+      for (let i = 0; i < fileArray.length; i += BATCH_SIZE) {
+        const batch = fileArray.slice(i, i + BATCH_SIZE);
+        
+        const newProductsData: any[] = [];
+        const uploadPromises = batch.map(async (file: File) => {
+          try {
+            const compressedBlob = await compressImage(file);
+            
+            const reader = new FileReader();
+            const downloadUrl = await new Promise<string>((resolve, reject) => {
+               reader.onloadend = () => resolve(reader.result as string);
+               reader.onerror = reject;
+               reader.readAsDataURL(compressedBlob);
+            });
+            
+            const safeName = file.name.replace(/\.[^/.]+$/, "").replace(/[^a-zA-Z0-9-_\s]/g, '');
+            
+            newProductsData.push({
+              name: safeName,
+              sku: '',
+              image: downloadUrl,
+              price: 0,
+              sizes: ['36', '37', '38', '39', '40', '41', '42', '43', '44'],
+              description: '',
+              status: 'active'
+            });
+          } catch (error) {
+            console.error("Error al procesar archivo:", file.name, error);
+          }
+        });
+        await Promise.all(uploadPromises);
+        
+        if (newProductsData.length > 0) {
+          addProductsBulk(selectedSubmodelId, newProductsData);
         }
-      });
-
-      await Promise.all(uploadPromises);
-      
-      // Guardar el lote en el estado local
-      if (newProductsData.length > 0) {
-        addProductsBulk(selectedSubmodelId, newProductsData);
+        
+        setUploadProgress(prev => ({ ...prev, current: Math.min(prev.current + BATCH_SIZE, fileArray.length) }));
+        
+        if (i + BATCH_SIZE < fileArray.length) {
+          await new Promise(resolve => setTimeout(resolve, 50)); 
+        }
       }
-      
-      setUploadProgress(prev => ({ ...prev, current: Math.min(prev.current + BATCH_SIZE, fileArray.length) }));
-      
-      // Pequeña pausa (throttle) para evitar errores 429 Too Many Requests de Firebase
-      if (i + BATCH_SIZE < fileArray.length) {
-        await new Promise(resolve => setTimeout(resolve, 500)); 
-      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsUploading(false);
+      e.target.value = '';
     }
-
-    setIsUploading(false);
-    e.target.value = '';
   };
 
   const handleAddProduct = (e: React.FormEvent) => {
@@ -235,9 +236,9 @@ export default function Catalog({ catalog, searchQuery }: CatalogProps) {
   };
 
   return (
-    <div className="flex overflow-x-auto gap-4 custom-scrollbar pb-6 w-full items-stretch">
+    <div className="flex overflow-x-auto gap-4 custom-scrollbar pb-6 w-full items-stretch h-full">
       {/* Categories Column */}
-      <div className="glass rounded-[40px] p-5 flex flex-col h-[calc(100vh-250px)] shadow-2xl relative overflow-hidden group min-w-[220px] w-[220px] flex-shrink-0">
+      <div className="glass rounded-[40px] p-5 flex flex-col h-full shadow-2xl relative overflow-hidden group min-w-[220px] w-[220px] flex-shrink-0">
         <div className="flex items-center gap-4 mb-8">
           <div className="p-3 bg-white text-black rounded-2xl shadow-xl shadow-white/10">
             <Tag size={20} />
@@ -319,7 +320,7 @@ export default function Catalog({ catalog, searchQuery }: CatalogProps) {
       </div>
 
       {/* Subcategories Column */}
-      <div className="glass rounded-[40px] p-5 flex flex-col h-[calc(100vh-250px)] shadow-2xl relative overflow-hidden group min-w-[220px] w-[220px] flex-shrink-0">
+      <div className="glass rounded-[40px] p-5 flex flex-col h-full shadow-2xl relative overflow-hidden group min-w-[220px] w-[220px] flex-shrink-0">
         <div className="flex items-center gap-4 mb-8">
           <div className="p-3 bg-white text-black rounded-2xl shadow-xl shadow-white/10">
             <Layers size={20} />
@@ -411,7 +412,7 @@ export default function Catalog({ catalog, searchQuery }: CatalogProps) {
       </div>
 
       {/* Models Column */}
-      <div className="glass rounded-[40px] p-5 flex flex-col h-[calc(100vh-250px)] shadow-2xl relative overflow-hidden group min-w-[220px] w-[220px] flex-shrink-0">
+      <div className="glass rounded-[40px] p-5 flex flex-col h-full shadow-2xl relative overflow-hidden group min-w-[220px] w-[220px] flex-shrink-0">
         <div className="flex items-center gap-4 mb-8">
           <div className="p-3 bg-white text-black rounded-2xl shadow-xl shadow-white/10">
             <MoreVertical size={20} />
@@ -501,7 +502,7 @@ export default function Catalog({ catalog, searchQuery }: CatalogProps) {
       </div>
 
       {/* Submodels Column */}
-      <div className="glass rounded-[40px] p-5 flex flex-col h-[calc(100vh-250px)] shadow-2xl relative overflow-hidden group min-w-[220px] w-[220px] flex-shrink-0">
+      <div className="glass rounded-[40px] p-5 flex flex-col h-full shadow-2xl relative overflow-hidden group min-w-[220px] w-[220px] flex-shrink-0">
         <div className="flex items-center gap-4 mb-8">
           <div className="p-3 bg-white text-black rounded-2xl shadow-xl shadow-white/10">
             <MoreVertical size={20} />
@@ -662,14 +663,19 @@ export default function Catalog({ catalog, searchQuery }: CatalogProps) {
                       type="file" 
                       accept="image/*" 
                       className="hidden" 
-                      onChange={(e) => {
+                      onChange={async (e) => {
                         const file = e.target.files?.[0];
                         if (file) {
-                          const reader = new FileReader();
-                          reader.onloadend = () => {
-                            setProductForm({...productForm, image: reader.result as string});
-                          };
-                          reader.readAsDataURL(file);
+                          try {
+                            const compressedBlob = await compressImage(file);
+                            const reader = new FileReader();
+                            reader.onloadend = () => {
+                              setProductForm({...productForm, image: reader.result as string});
+                            };
+                            reader.readAsDataURL(compressedBlob);
+                          } catch(err) {
+                            console.error(err);
+                          }
                         }
                       }}
                     />
