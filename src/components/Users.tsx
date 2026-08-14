@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { Shield, UserPlus, Mail, Trash2, Edit2, ShieldAlert, ShieldCheck, User } from 'lucide-react';
+import { Shield, UserPlus, Mail, Trash2, Edit2, ShieldAlert, ShieldCheck, User, Power, Lock } from 'lucide-react';
 import { UserRole, User as UserType } from '../types';
 
 export default function Users({ catalog }: { catalog: any }) {
   const { data, addUser, updateUser, deleteUser } = catalog;
   const users = data.users || [];
 
+  const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [form, setForm] = useState({
     firstName: '',
     lastName: '',
@@ -21,20 +22,33 @@ export default function Users({ catalog }: { catalog: any }) {
     e.preventDefault();
     if (!form.firstName || !form.lastName || !form.email || !form.dni) return;
     
-    addUser({
-      ...form,
-      name: `${form.firstName} ${form.lastName}`.toUpperCase(),
-      password: form.password || '123456' // Default password if not provided
-    });
+    if (editingUserId) {
+      const updatePayload: Partial<UserType> = {
+        firstName: form.firstName,
+        lastName: form.lastName,
+        name: `${form.firstName} ${form.lastName}`.toUpperCase(),
+        email: form.email,
+        dni: form.dni,
+        phone: form.phone,
+        role: form.role
+      };
+      
+      if (form.password) {
+        updatePayload.password = form.password;
+      }
+      
+      updateUser(editingUserId, updatePayload);
+      setEditingUserId(null);
+    } else {
+      addUser({
+        ...form,
+        name: `${form.firstName} ${form.lastName}`.toUpperCase(),
+        password: form.password || '123456'
+      });
+    }
     
     setForm({ 
-      firstName: '', 
-      lastName: '', 
-      email: '', 
-      dni: '',
-      phone: '',
-      password: '',
-      role: 'client' 
+      firstName: '', lastName: '', email: '', dni: '', phone: '', password: '', role: 'client' 
     });
   };
 
@@ -79,7 +93,7 @@ export default function Users({ catalog }: { catalog: any }) {
            <div className="glass rounded-[48px] p-10 border-white/5">
               <h4 className="font-black uppercase italic tracking-widest text-lg mb-8 flex items-center gap-3">
                  <UserPlus size={20} className="text-white" />
-                 Inscribir Master
+                 {editingUserId ? 'Editar Usuario' : 'Inscribir Master'}
               </h4>
               <form onSubmit={handleAddUser} className="space-y-4">
                  <div className="grid grid-cols-2 gap-4">
@@ -129,6 +143,15 @@ export default function Users({ catalog }: { catalog: any }) {
                     />
                  </div>
                  <div>
+                    <input 
+                       type="password" 
+                       placeholder={editingUserId ? "NUEVA CONTRASEÑA (DEJAR EN BLANCO PARA NO CAMBIAR)" : "CONTRASEÑA"}
+                       value={form.password}
+                       onChange={e => setForm({...form, password: e.target.value})}
+                       className="w-full px-6 py-5 bg-white/5 border border-white/5 rounded-[24px] outline-none focus:bg-white/10 text-xs font-bold uppercase tracking-widest transition-all"
+                    />
+                 </div>
+                 <div>
                     <select 
                        value={form.role}
                        onChange={e => setForm({...form, role: e.target.value as UserRole})}
@@ -142,8 +165,17 @@ export default function Users({ catalog }: { catalog: any }) {
                     type="submit"
                     className="w-full py-6 bg-white text-black font-black uppercase italic tracking-widest text-[10px] rounded-[24px] shadow-2xl shadow-white/10 hover:scale-[1.02] active:scale-95 transition-all"
                  >
-                    Finalizar Registro
+                    {editingUserId ? 'Actualizar Usuario' : 'Finalizar Registro'}
                  </button>
+                 {editingUserId && (
+                    <button 
+                       type="button"
+                       onClick={() => { setEditingUserId(null); setForm({ firstName: '', lastName: '', email: '', dni: '', phone: '', password: '', role: 'client' }); }}
+                       className="w-full py-4 mt-2 bg-white/5 text-white/60 font-black uppercase italic tracking-widest text-[10px] rounded-[24px] hover:bg-white/10 transition-all"
+                    >
+                       Cancelar Edición
+                    </button>
+                 )}
               </form>
            </div>
         </div>
@@ -191,23 +223,49 @@ export default function Users({ catalog }: { catalog: any }) {
                              <td className="px-10 py-8">
                                 <div className="flex flex-col gap-2">
                                    {getRoleBadge(user.role)}
+                                   {user.status === 'suspended' && (
+                                     <span className="px-3 py-1 bg-red-500/20 text-red-400 text-[8px] font-black uppercase tracking-widest rounded-lg flex items-center gap-1.5 w-max">
+                                       <ShieldAlert size={10} /> Suspendido
+                                     </span>
+                                   )}
                                 </div>
                              </td>
                              <td className="px-10 py-8 text-right">
                                 <div className="flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-all duration-500">
                                    <button 
+                                      title={user.status === 'suspended' ? 'Activar Cuenta' : 'Suspender Cuenta'}
+                                      className={`p-3 rounded-xl transition-all ${user.status === 'suspended' ? 'bg-green-500/10 hover:bg-green-500 hover:text-black text-green-500' : 'bg-orange-500/10 hover:bg-orange-500 hover:text-black text-orange-500'}`}
+                                      onClick={() => {
+                                         if(confirm(user.status === 'suspended' ? '¿Reactivar cuenta de usuario?' : '¿Suspender temporalmente esta cuenta?')) {
+                                           updateUser(user.id, { status: user.status === 'suspended' ? 'active' : 'suspended' });
+                                         }
+                                      }}
+                                   >
+                                      <Power size={16} />
+                                   </button>
+                                   <button 
+                                      title="Editar Usuario"
                                       className="p-3 bg-white/5 hover:bg-white hover:text-black rounded-xl transition-all"
                                       onClick={() => {
-                                         const newRole = user.role === 'client' ? 'admin' : 'client';
-                                         updateUser(user.id, { role: newRole as UserRole });
+                                         setEditingUserId(user.id);
+                                         setForm({
+                                            firstName: user.firstName || user.name.split(' ')[0] || '',
+                                            lastName: user.lastName || user.name.split(' ').slice(1).join(' ') || '',
+                                            email: user.email,
+                                            dni: user.dni || '',
+                                            phone: user.phone || '',
+                                            password: '', // Don't populate password
+                                            role: user.role
+                                         });
                                       }}
                                    >
                                       <Edit2 size={16} />
                                    </button>
                                    <button 
+                                      title="Eliminar Cuenta"
                                       className="p-3 bg-white/5 hover:bg-red-600 hover:text-white rounded-xl transition-all"
                                       onClick={() => {
-                                         if(confirm('¿Revocar acceso permanentemente?')) deleteUser(user.id);
+                                         if(confirm('¿Revocar acceso permanentemente y eliminar registro?')) deleteUser(user.id);
                                       }}
                                    >
                                       <Trash2 size={16} />

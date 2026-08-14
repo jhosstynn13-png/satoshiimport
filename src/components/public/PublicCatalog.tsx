@@ -5,6 +5,8 @@ import { useCart } from '../../context/CartContext';
 import ProductCard from '../ProductCard';
 
 export default function PublicCatalog({ catalog, initialCategoryName = null }: { catalog: any, initialCategoryName?: string | null }) {
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 30;
   const { categories } = catalog.data;
   const { addItem } = useCart();
   const [activeCategory, setActiveCategory] = useState<string | null>(initialCategoryName);
@@ -20,6 +22,7 @@ export default function PublicCatalog({ catalog, initialCategoryName = null }: {
       setActiveSubcategory(null);
       setActiveModel(null);
       setActiveSubmodel(null);
+      setCurrentPage(1);
     }
   }, [initialCategoryName]);
 
@@ -118,7 +121,7 @@ export default function PublicCatalog({ catalog, initialCategoryName = null }: {
                 type="text"
                 placeholder="BUSCAR CALZADO, TALLA O MARCA..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
                 className="w-full pl-14 pr-12 py-4 bg-white/5 border border-white/10 rounded-[20px] outline-none focus:bg-white/10 focus:border-white/30 transition-all text-[10px] font-black uppercase tracking-widest placeholder:text-white/20"
               />
               {searchQuery && (
@@ -264,9 +267,9 @@ export default function PublicCatalog({ catalog, initialCategoryName = null }: {
       {/* Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 xxl:grid-cols-5 gap-6">
         <AnimatePresence mode="popLayout">
-          {filteredProducts.map((product: any) => (
+          {filteredProducts.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE).map((product: any, i: number) => (
             <motion.div
-              key={product.id}
+              key={`${product.id}-${i}`}
               layout
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -278,7 +281,7 @@ export default function PublicCatalog({ catalog, initialCategoryName = null }: {
                 onEdit={() => {}} // Not usable here
                 onDelete={() => {}} // Not usable here
                 catalog={catalog}
-                onAddToCart={(!catalog.currentUser || catalog.currentUser.id === 'guest') ? undefined : (p) => addItem(p)}
+                onAddToCart={(!catalog.currentUser || catalog.currentUser.id === 'guest') ? undefined : (p, size) => addItem(p, size)}
                 isPublic={true}
               />
             </motion.div>

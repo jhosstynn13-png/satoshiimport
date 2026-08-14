@@ -5,22 +5,29 @@ import { useState } from 'react';
 
 interface PublicNavbarProps {
   currentView: string;
-  onViewChange: (view: any) => void;
+  currentCategory?: string | null;
+  categories: any[];
+  onViewChange: (view: string, payload?: string | null) => void;
   onLoginClick: () => void;
   onProfileClick: () => void;
   currentUser: any;
 }
 
-export default function PublicNavbar({ currentView, onViewChange, onLoginClick, onProfileClick, currentUser }: PublicNavbarProps) {
+export default function PublicNavbar({ currentView, currentCategory, categories = [], onViewChange, onLoginClick, onProfileClick, currentUser }: PublicNavbarProps) {
   const { totalItems, totalPrice } = useCart();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+  const categoryLinks = categories.map((cat: any) => ({
+    id: `category_${cat.id}`,
+    label: cat.name,
+    type: 'category',
+    categoryName: cat.name
+  }));
+
   const navLinks = [
-    { id: 'home', label: 'Inicio' },
-    { id: 'calzado', label: 'Calzado' },
-    { id: 'ropa', label: 'Ropa' },
-    { id: 'accesorios', label: 'Accesorios' },
-    { id: 'contact', label: 'Contacto' }
+    { id: 'home', label: 'Inicio', type: 'page' },
+    ...categoryLinks,
+    { id: 'contact', label: 'Contacto', type: 'page' }
   ];
 
   return (
@@ -42,19 +49,31 @@ export default function PublicNavbar({ currentView, onViewChange, onLoginClick, 
       {/* Desktop Links */}
       <div className="hidden lg:flex items-center gap-12 flex-grow justify-center">
         <div className="flex gap-8 text-[9px] font-black tracking-[0.25em] uppercase text-white/50">
-          {navLinks.map(link => (
-            <button 
-              key={link.id}
-              onClick={() => onViewChange(link.id)}
-              className={`transition-all duration-300 relative py-1 ${
-                currentView === link.id 
-                  ? 'text-white after:content-[""] after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-white' 
-                  : 'hover:text-white'
-              }`}
-            >
-              {link.label}
-            </button>
-          ))}
+          {navLinks.map(link => {
+            const isActive = link.type === 'category' 
+              ? currentView === 'catalog' && currentCategory === (link as any).categoryName
+              : currentView === link.id;
+              
+            return (
+              <button 
+                key={link.id}
+                onClick={() => {
+                  if (link.type === 'category') {
+                    onViewChange('catalog', (link as any).categoryName);
+                  } else {
+                    onViewChange(link.id);
+                  }
+                }}
+                className={`transition-all duration-300 relative py-1 ${
+                  isActive 
+                    ? 'text-white after:content-[""] after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-white' 
+                    : 'hover:text-white'
+                }`}
+              >
+                {link.label}
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -101,15 +120,28 @@ export default function PublicNavbar({ currentView, onViewChange, onLoginClick, 
             exit={{ opacity: 0, y: -20 }}
             className="absolute top-full left-0 w-full bg-black border-b border-white/5 p-8 flex flex-col gap-6 md:hidden z-40"
           >
-            {navLinks.map(link => (
-              <button 
-                key={link.id}
-                onClick={() => { onViewChange(link.id); setMobileMenuOpen(false); }}
-                className={`text-[10px] font-black tracking-widest uppercase text-left ${currentView === link.id ? 'text-white' : 'text-white/40'}`}
-              >
-                {link.label}
-              </button>
-            ))}
+            {navLinks.map(link => {
+              const isActive = link.type === 'category' 
+                ? currentView === 'catalog' && currentCategory === (link as any).categoryName
+                : currentView === link.id;
+
+              return (
+                <button 
+                  key={link.id}
+                  onClick={() => {
+                    if (link.type === 'category') {
+                      onViewChange('catalog', (link as any).categoryName);
+                    } else {
+                      onViewChange(link.id);
+                    }
+                    setMobileMenuOpen(false);
+                  }}
+                  className={`text-[10px] font-black tracking-widest uppercase text-left ${isActive ? 'text-white' : 'text-white/40'}`}
+                >
+                  {link.label}
+                </button>
+              );
+            })}
             <button 
               onClick={() => { currentUser ? onProfileClick() : onLoginClick(); setMobileMenuOpen(false); }}
               className={`text-[10px] font-black tracking-widest uppercase text-left ${currentView === 'profile' ? 'text-white' : 'text-white/40'}`}

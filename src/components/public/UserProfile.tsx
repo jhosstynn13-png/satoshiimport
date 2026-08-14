@@ -168,14 +168,6 @@ export default function UserProfile({ catalog }: { catalog: any }) {
                       </div>
                       
                       <div className="flex items-center gap-6">
-                        <button 
-                          onClick={() => downloadReceipt(order, currentUser)}
-                          className="p-2 bg-white/5 hover:bg-white hover:text-black rounded-lg transition-all text-white/20 flex items-center gap-2"
-                          title="Descargar Boleta"
-                        >
-                          <Download size={14} />
-                          <span className="text-[9px] font-black uppercase tracking-widest hidden md:block">Boleta</span>
-                        </button>
                         <span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest ${getStatusColor(order.status)}`}>
                           {order.status}
                         </span>

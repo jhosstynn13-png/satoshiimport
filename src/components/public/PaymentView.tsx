@@ -71,17 +71,35 @@ export default function PaymentView({ onBack, catalog }: PaymentViewProps) {
   const handlePayment = (e: FormEvent) => {
     e.preventDefault();
     if (!validateShipping()) return;
-    if (form.phone.length !== 9) return alert('Ingresa un celular de origen válido de 9 dígitos.');
-    if (!screenshot) return alert('Debes adjuntar el comprobante de pago.');
 
     const currentTotal = totalPrice;
     setFinalTotal(currentTotal);
+
+    // Build WhatsApp message
+    const waPhone = "51944186522";
+    let waMessage = `*NUEVO PEDIDO - SATOSHIMPORT*%0A%0A`;
+    waMessage += `*Cliente:* ${currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : 'Invitado'}%0A`;
+    if (currentUser?.dni) waMessage += `*DNI:* ${currentUser.dni}%0A`;
+    waMessage += `*Teléfono:* ${form.tel}%0A%0A`;
+    
+    waMessage += `*DATOS DE ENVÍO*%0A`;
+    waMessage += `*Dirección:* ${form.calle} ${form.numero || 'S/N'} ${form.piso ? '- ' + form.piso : ''}%0A`;
+    waMessage += `*Localidad:* ${form.localidad}, ${form.departamento} ${form.zip ? '(CP: ' + form.zip + ')' : ''}%0A`;
+    if (!form.sinEntrecalles) waMessage += `*Entrecalles:* ${form.calle1} y ${form.calle2}%0A`;
+    if (form.indicaciones) waMessage += `*Referencia:* ${form.indicaciones}%0A%0A`;
+    
+    waMessage += `*PRODUCTOS*%0A`;
+    items.forEach(item => {
+      const name = item.selectedSize ? `${item.name} - Talla ${item.selectedSize}` : item.name;
+      waMessage += `- ${item.quantity}x ${name} ($ ${(item.price * item.quantity).toFixed(2)})%0A`;
+    });
+    waMessage += `%0A*TOTAL:* $ ${currentTotal.toFixed(2)}%0A`;
 
     // Simular procesamiento
     setTimeout(() => {
       const orderItems: OrderItem[] = items.map(item => ({
         productId: item.id,
-        name: item.name,
+        name: item.selectedSize ? `${item.name} - Talla ${item.selectedSize}` : item.name,
         sku: item.sku,
         quantity: item.quantity,
         price: item.price
@@ -93,7 +111,7 @@ export default function PaymentView({ onBack, catalog }: PaymentViewProps) {
         items: orderItems,
         total: currentTotal,
         status: 'pending' as const,
-        paymentMethod: method,
+        paymentMethod: 'whatsapp',
         shippingDetails: { ...form },
       };
 
@@ -102,98 +120,58 @@ export default function PaymentView({ onBack, catalog }: PaymentViewProps) {
       setIsSuccess(true);
       clearCart();
 
-    // Notify owner and Auto download
-    const processPayment = async () => {
-      try {
-        // Function to compress image
-        const compressImage = (file: File): Promise<string> => {
-          return new Promise((resolve) => {
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = (event) => {
-              const img = new Image();
-              img.src = event.target?.result as string;
-              img.onload = () => {
-                const canvas = document.createElement('canvas');
-                const MAX_WIDTH = 400; // Low res for email
-                const scaleSize = MAX_WIDTH / img.width;
-                canvas.width = MAX_WIDTH;
-                canvas.height = img.height * scaleSize;
+      // Open WhatsApp
+      window.open(`https://wa.me/${waPhone}?text=${waMessage}`, '_blank');
 
-                const ctx = canvas.getContext('2d');
-                ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
-                
-                // Compress to JPEG with 0.6 quality
-                const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
-                resolve(dataUrl);
-              };
-            };
-          });
-        };
-
-        let screenshotBase64 = '';
-        if (screenshot) {
-          try {
-            screenshotBase64 = await compressImage(screenshot);
-          } catch (e) {
-            console.error("Compression failed:", e);
-          }
-        }
-
-        // Prepare data for EmailJS template
-        const emailData = {
-          order_id: completedOrder.id,
-          email: 'IMPORTSATOSHI@HOTMAIL.COM', 
-          client_email: currentUser?.email || 'Invitado',
-          screenshot_url: screenshotBase64,
-          orders: items.map(item => ({
-            image_url: item.image,
-            name: item.name,
-            units: item.quantity,
-            price: (item.price * item.quantity).toFixed(2)
-          })),
-          cost: {
-            shipping: 'A COORDINAR',
-            tax: '0.00', // Send something to avoid empty template tags if they exist
-            total: currentTotal.toFixed(2)
-          },
-          client_details: `
-            <div style="font-family: sans-serif; line-height: 1.6; color: #333;">
-              <table style="width: 100%; border-collapse: collapse;">
-                <tr><td style="padding: 4px 0; color: #666;">Cliente:</td><td style="padding: 4px 0; text-align: right;"><strong>${completedOrder.customerName}</strong></td></tr>
-                <tr><td style="padding: 4px 0; color: #666;">DNI:</td><td style="padding: 4px 0; text-align: right;">${currentUser?.dni || 'N/A'}</td></tr>
-                <tr><td style="padding: 4px 0; color: #666;">Teléfono:</td><td style="padding: 4px 0; text-align: right;">${form.tel}</td></tr>
-              </table>
-
-              <h4 style="margin: 20px 0 10px 0; text-transform: uppercase; font-size: 12px; color: #888;">Dirección de Entrega</h4>
-              <div style="border-left: 3px solid #000; padding-left: 12px;">
-                <p style="margin: 2px 0;"><strong>${form.calle} ${form.numero || 'S/N'}</strong> ${form.piso ? '- ' + form.piso : ''}</p>
-                <p style="margin: 2px 0; font-size: 13px;">${form.localidad}, ${form.departamento} ${form.zip ? '(CP: ' + form.zip + ')' : ''}</p>
-                ${!form.sinEntrecalles ? `<p style="margin: 2px 0; font-size: 12px; color: #666;">Entrecalles: ${form.calle1} y ${form.calle2}</p>` : ''}
-                <p style="margin: 8px 0 0 0; font-size: 12px; font-style: italic; color: #444;">Ref: ${form.indicaciones || 'Sin referencia adicional'}</p>
+      // Notify owner and Auto download
+      const processPayment = async () => {
+        try {
+          // Prepare data for EmailJS template
+          const emailData = {
+            order_id: completedOrder.id,
+            email: 'IMPORTSATOSHI@HOTMAIL.COM', 
+            client_email: currentUser?.email || 'Invitado',
+            screenshot_url: '', // No screenshot for WhatsApp request
+            orders: items.map(item => ({
+              image_url: item.image,
+              name: item.selectedSize ? `${item.name} - Talla ${item.selectedSize}` : item.name,
+              units: item.quantity,
+              price: (item.price * item.quantity).toFixed(2)
+            })),
+            cost: {
+              shipping: 'A COORDINAR',
+              tax: '0.00', // Send something to avoid empty template tags if they exist
+              total: currentTotal.toFixed(2)
+            },
+            client_details: `
+              <div style="font-family: sans-serif; line-height: 1.6; color: #333;">
+                <table style="width: 100%; border-collapse: collapse;">
+                  <tr><td style="padding: 4px 0; color: #666;">Cliente:</td><td style="padding: 4px 0; text-align: right;"><strong>${completedOrder.customerName}</strong></td></tr>
+                  <tr><td style="padding: 4px 0; color: #666;">DNI:</td><td style="padding: 4px 0; text-align: right;">${currentUser?.dni || 'N/A'}</td></tr>
+                  <tr><td style="padding: 4px 0; color: #666;">Teléfono:</td><td style="padding: 4px 0; text-align: right;">${form.tel}</td></tr>
+                </table>
+                <h4 style="margin: 20px 0 10px 0; text-transform: uppercase; font-size: 12px; color: #888;">Dirección de Entrega</h4>
+                <div style="border-left: 3px solid #000; padding-left: 12px;">
+                  <p style="margin: 2px 0;"><strong>${form.calle} ${form.numero || 'S/N'}</strong> ${form.piso ? '- ' + form.piso : ''}</p>
+                  <p style="margin: 2px 0; font-size: 13px;">${form.localidad}, ${form.departamento} ${form.zip ? '(CP: ' + form.zip + ')' : ''}</p>
+                  ${!form.sinEntrecalles ? `<p style="margin: 2px 0; font-size: 12px; color: #666;">Entrecalles: ${form.calle1} y ${form.calle2}</p>` : ''}
+                  <p style="margin: 8px 0 0 0; font-size: 12px; font-style: italic; color: #444;">Ref: ${form.indicaciones || 'Sin referencia adicional'}</p>
+                </div>
+                <h4 style="margin: 20px 0 10px 0; text-transform: uppercase; font-size: 12px; color: #888;">Método</h4>
+                <p style="margin: 2px 0;">Estado: <strong>SOLICITUD VÍA WHATSAPP</strong></p>
               </div>
-
-              <h4 style="margin: 20px 0 10px 0; text-transform: uppercase; font-size: 12px; color: #888;">Validación de Pago Digital</h4>
-              <p style="margin: 2px 0;">Estado: <strong>PENDIENTE DE REVISIÓN</strong></p>
-              <p style="margin: 2px 0;">Celular Origen: <strong>${form.phone}</strong></p>
-            </div>
-          `
-        };
-
-        const response = await sendOrderNotification(emailData);
-        if (!response) {
-          // If it failed (likely due to size), try one more time without screenshot
-          console.warn("Attempting to send without screenshot due to potential size error...");
-          await sendOrderNotification({ ...emailData, screenshot_url: 'IMAGE_TOO_LARGE_SEE_ADMIN' });
+            `
+          };
+          
+          await sendOrderNotification(emailData);
+          // downloadReceipt(completedOrder, currentUser);
+        } catch (err) {
+          console.error("Receipt actions failed:", err);
         }
-        downloadReceipt(completedOrder, currentUser);
-      } catch (err) {
-        console.error("Receipt actions failed:", err);
-      }
-    };
+      };
 
-    processPayment();
-    }, 1500);
+      processPayment();
+    }, 1000);
   };
 
   if (isSuccess) {
@@ -228,12 +206,6 @@ export default function PaymentView({ onBack, catalog }: PaymentViewProps) {
 
           <div className="pt-4 space-y-4">
             <button 
-              onClick={() => downloadReceipt(currentOrder, currentUser)}
-              className="w-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 py-4 rounded-full font-black uppercase tracking-widest italic text-[10px] flex items-center justify-center gap-3 hover:bg-emerald-500 hover:text-white transition-all"
-            >
-              <Download size={16} /> Descargar Boleta Nuevamente
-            </button>
-            <button 
               onClick={onBack}
               className="w-full bg-white text-black py-4 rounded-full font-black uppercase tracking-widest italic text-xs shadow-xl active:scale-95 transition-all"
             >
@@ -264,7 +236,7 @@ export default function PaymentView({ onBack, catalog }: PaymentViewProps) {
           <div className={`w-12 h-px ${step >= 2 ? 'bg-white' : 'bg-white/5'}`} />
           <div className="flex items-center gap-2">
             <div className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-xs ${step >= 2 ? 'bg-white text-black' : 'bg-white/5 text-white/20'}`}>2</div>
-            <span className={`text-[10px] font-black uppercase tracking-widest ${step >= 2 ? 'text-white' : 'text-white/20'}`}>Pago</span>
+            <span className={`text-[10px] font-black uppercase tracking-widest ${step >= 2 ? 'text-white' : 'text-white/20'}`}>Pedido</span>
           </div>
         </div>
 
@@ -439,104 +411,27 @@ export default function PaymentView({ onBack, catalog }: PaymentViewProps) {
             /* Payment Section */
             <form onSubmit={handlePayment} className="space-y-8">
               <div className="space-y-4">
-                <h1 className="text-4xl font-black italic uppercase tracking-tighter leading-tight">Finalizar <span className="text-white/20">Pago</span></h1>
-                <p className="text-white/40 italic text-sm">Escanea el código QR y adjunta tu comprobante para procesar la orden.</p>
+                <h1 className="text-4xl font-black italic uppercase tracking-tighter leading-tight">Confirmar <span className="text-white/20">Pedido</span></h1>
+                <p className="text-white/40 italic text-sm">Revisa tu información y envía tu pedido por WhatsApp para coordinar el pago y envío.</p>
               </div>
 
               <div className="glass p-8 rounded-[40px] border-white/5 space-y-6">
                 <h3 className="text-lg font-black uppercase italic tracking-wider flex items-center gap-3">
-                  <Smartphone size={20} className="text-white/20" /> Pago Digital
+                  <Smartphone size={20} className="text-white/20" /> Solicitud por WhatsApp
                 </h3>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <button 
-                    type="button"
-                    onClick={() => setMethod('yape')}
-                    className={`p-4 rounded-3xl border-2 transition-all flex items-center justify-center gap-3 ${
-                      method === 'yape' ? 'bg-purple-600/10 border-purple-500' : 'bg-white/5 border-white/5'
-                    }`}
-                  >
-                    <span className="text-xs font-black uppercase italic tracking-widest">Yape</span>
-                  </button>
-                  <button 
-                    type="button"
-                    onClick={() => setMethod('dale')}
-                    className={`p-4 rounded-3xl border-2 transition-all flex items-center justify-center gap-3 ${
-                      method === 'dale' ? 'bg-blue-600/10 border-blue-500' : 'bg-white/5 border-white/5'
-                    }`}
-                  >
-                    <span className="text-xs font-black uppercase italic tracking-widest">Dale</span>
-                  </button>
-                </div>
-
+                
                 <div className="bg-white/5 border border-dashed border-white/10 p-8 rounded-[30px] text-center space-y-4">
-                  <h2 className="text-base font-black uppercase italic tracking-wider">Escanea y Transfiere</h2>
-                  <div className="w-48 h-48 bg-white mx-auto rounded-3xl flex items-center justify-center p-2 overflow-hidden shadow-2xl relative">
-                    <img 
-                      src={method === 'yape' 
-                        ? "https://yimuttzzvijmvlxqleor.supabase.co/storage/v1/object/public/productos/yape%20satoshi%20satoshimport.png" 
-                        : "https://yimuttzzvijmvlxqleor.supabase.co/storage/v1/object/public/productos/DALE%20%20Satoshi.png"
-                      } 
-                      alt={`QR ${method} SATOSHIMPORT`} 
-                      className="w-full h-full object-contain"
-                    />
-                    <div className="absolute inset-0 bg-black/5 flex items-center justify-center pointer-events-none">
-                      <QrCode size={40} className="opacity-10" />
-                    </div>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-[9px] font-black uppercase tracking-[0.3em] text-white/30">Número Destino</p>
-                    <p className="text-lg font-black italic">944 186 522</p>
-                  </div>
-                  <div className="flex items-center justify-center gap-2 text-emerald-400 font-black italic tracking-widest text-[10px]">
-                    <Timer size={12} /> {formatTime(timeLeft)}
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <label className="text-[9px] font-black uppercase tracking-[0.2em] text-white/40 block ml-4">Celular de Origen</label>
-                    <input 
-                      type="text" 
-                      maxLength={9}
-                      required
-                      placeholder="9XXXXXXXX"
-                      value={form.phone}
-                      onChange={e => setForm(prev => ({ ...prev, phone: e.target.value.replace(/\D/g, '') }))}
-                      className="w-full bg-white/5 border border-white/10 rounded-full px-6 py-4 text-sm font-black placeholder:text-white/10 focus:outline-none focus:border-white/20 transition-all"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-[9px] font-black uppercase tracking-[0.2em] text-white/40 block ml-4">Comprobante (Obligatorio)</label>
-                    <div className="relative">
-                      <input 
-                        type="file" 
-                        accept="image/*"
-                        required
-                        onChange={e => setScreenshot(e.target.files?.[0] || null)}
-                        className="absolute inset-0 opacity-0 cursor-pointer z-10"
-                      />
-                      <div className={`w-full bg-white/5 border-2 border-dashed rounded-[24px] px-6 py-8 transition-all flex flex-col items-center justify-center gap-2 ${screenshot ? 'border-emerald-500/50 bg-emerald-500/5' : 'border-white/10 hover:border-white/20'}`}>
-                        <div className={screenshot ? 'text-emerald-400' : 'text-white/20'}>
-                          <QrCode size={24} />
-                        </div>
-                        <span className={`text-[10px] font-black uppercase tracking-widest ${screenshot ? 'text-emerald-400' : 'text-white/40'}`}>
-                          {screenshot ? screenshot.name : 'Subir Captura de Pantalla'}
-                        </span>
-                        {!screenshot && <span className="text-[8px] text-white/20 uppercase font-black">Solo archivos de imagen (.jpg, .png)</span>}
-                      </div>
-                    </div>
-                  </div>
+                  <h2 className="text-base font-black uppercase italic tracking-wider">¡Todo Listo!</h2>
+                  <p className="text-sm text-white/60">Al confirmar, serás redirigido a WhatsApp con el resumen de tu pedido para coordinar directamente con un vendedor de Satoshimport.</p>
                 </div>
               </div>
 
               <div className="flex flex-col gap-4">
                 <button 
                   type="submit"
-                  className="w-full bg-white text-black py-5 rounded-full font-black uppercase tracking-[0.3em] italic text-xs shadow-xl active:scale-95 transition-all flex items-center justify-center gap-3"
+                  className="w-full bg-emerald-500 text-black py-5 rounded-full font-black uppercase tracking-[0.3em] italic text-xs shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:shadow-[0_0_30px_rgba(16,185,129,0.5)] active:scale-95 transition-all flex items-center justify-center gap-3"
                 >
-                  Confirmar Pago de $ {totalPrice.toLocaleString()} <ArrowRight size={16} />
+                  Solicitar Pedido por $ {totalPrice.toLocaleString()} <ArrowRight size={16} />
                 </button>
                 <button 
                   type="button"
@@ -559,12 +454,12 @@ export default function PaymentView({ onBack, catalog }: PaymentViewProps) {
             
             <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 no-scrollbar">
               {items.map(item => (
-                <div key={item.id} className="flex gap-4 items-center">
+                <div key={item.cartItemId} className="flex gap-4 items-center">
                   <div className="w-14 h-14 bg-white/5 rounded-2xl overflow-hidden flex-shrink-0">
                     <img src={item.image} alt={item.name} className="w-full h-full object-cover opacity-60" />
                   </div>
                   <div className="flex-grow">
-                    <h4 className="text-[10px] font-black uppercase tracking-widest italic">{item.name}</h4>
+                    <h4 className="text-[10px] font-black uppercase tracking-widest italic">{item.name}{item.selectedSize ? ` - Talla ${item.selectedSize}` : ""}</h4>
                     <p className="text-[9px] text-white/30 font-black uppercase tracking-widest mt-0.5">X{item.quantity}</p>
                   </div>
                   <div className="text-right">

@@ -4,7 +4,7 @@ import { useCart } from '../../context/CartContext';
 import { useState } from 'react';
 
 export default function FloatingCart({ onCheckout }: { onCheckout?: () => void }) {
-  const { items, removeItem, addItem, totalItems, totalPrice, clearCart } = useCart();
+  const { items, removeItem, deleteItem, addItem, totalItems, totalPrice, clearCart } = useCart();
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
 
@@ -40,7 +40,7 @@ export default function FloatingCart({ onCheckout }: { onCheckout?: () => void }
 
             <div className="flex-grow overflow-y-auto space-y-2 pr-2 no-scrollbar">
               {items.map((item) => (
-                <div key={item.id} className="flex gap-2 p-2 bg-white/5 border border-white/5 rounded-2xl group">
+                <div key={item.cartItemId} className="flex gap-2 p-2 bg-white/5 border border-white/5 rounded-2xl group">
                   <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center overflow-hidden flex-shrink-0">
                     <img 
                       src={item.image || `https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=100&h=100&fit=crop`} 
@@ -49,13 +49,18 @@ export default function FloatingCart({ onCheckout }: { onCheckout?: () => void }
                     />
                   </div>
                   <div className="flex-grow min-w-0">
-                    <h4 className="text-[8px] font-black uppercase tracking-widest text-white/80 leading-tight mb-1 truncate">{item.name}</h4>
+                    <h4 className="text-[8px] font-black uppercase tracking-widest text-white/80 leading-tight mb-1 truncate">{item.name}{item.selectedSize ? ` - Talla ${item.selectedSize}` : ""}</h4>
                     <div className="flex items-center justify-between">
                       <span className="text-[10px] font-black italic text-emerald-400">$ {(item.price * item.quantity).toLocaleString()}</span>
-                      <div className="flex items-center gap-2 bg-black/50 border border-white/10 rounded-lg px-1.5 py-0.5">
-                        <button onClick={() => removeItem(item.id)} className="text-white/40 hover:text-white"><Minus size={10} /></button>
-                        <span className="text-[9px] font-black">{item.quantity}</span>
-                        <button onClick={() => addItem(item)} className="text-white/40 hover:text-white"><Plus size={10} /></button>
+                      <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-2 bg-black/50 border border-white/10 rounded-lg px-1.5 py-0.5">
+                          <button onClick={() => removeItem(item.cartItemId)} className="text-white/40 hover:text-white"><Minus size={10} /></button>
+                          <span className="text-[9px] font-black">{item.quantity}</span>
+                          <button onClick={() => addItem(item, item.selectedSize)} className="text-white/40 hover:text-white"><Plus size={10} /></button>
+                        </div>
+                        <button onClick={() => deleteItem(item.cartItemId)} className="p-1 text-white/20 hover:text-red-500 hover:bg-red-500/10 rounded-md transition-colors">
+                          <Trash2 size={12} />
+                        </button>
                       </div>
                     </div>
                   </div>

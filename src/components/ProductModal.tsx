@@ -19,7 +19,9 @@ export default function ProductModal({ product, onClose, onSave }: ProductModalP
     price: product.price?.toString() || '',
     sizes: (product.sizes || []).join(', '),
     status: (product.status || 'active') as 'active' | 'discontinued',
-    description: product.description || ''
+    description: product.description || '',
+    isFavorite: product.isFavorite || false,
+    featuredStyle: product.featuredStyle || ''
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -37,7 +39,9 @@ export default function ProductModal({ product, onClose, onSave }: ProductModalP
       price: priceVal,
       sizes: form.sizes.split(',').map(s => s.trim()).filter(s => s),
       status: form.status,
-      description: form.description
+      description: form.description,
+      isFavorite: form.isFavorite,
+      featuredStyle: form.featuredStyle
     };
 
     console.log("✅ Cambios guardados exitosamente en terminal:", data);
@@ -106,7 +110,16 @@ export default function ProductModal({ product, onClose, onSave }: ProductModalP
                 />
               </div>
               <div className="space-y-3">
-                <label className="text-[10px] font-black text-white/60 uppercase tracking-[0.3em] ml-2">Tallas Disponibles (Sep. Coma)</label>
+                <div className="flex items-center justify-between ml-2">
+                  <label className="text-[10px] font-black text-white/60 uppercase tracking-[0.3em]">Tallas Disponibles (Sep. Coma)</label>
+                  <button 
+                    type="button"
+                    onClick={() => setForm({...form, sizes: '36, 37, 38, 39, 40, 41, 42, 43, 44'})}
+                    className="text-[10px] font-black text-white/40 hover:text-white uppercase tracking-widest transition-colors"
+                  >
+                    + TODAS
+                  </button>
+                </div>
                 <input 
                   type="text" 
                   value={form.sizes}
@@ -176,6 +189,37 @@ export default function ProductModal({ product, onClose, onSave }: ProductModalP
                 onChange={e => setForm({...form, description: e.target.value})}
                 className="w-full px-8 py-6 bg-white/5 border border-white/10 rounded-[32px] outline-none focus:bg-white/10 focus:border-white transition-all min-h-[160px] resize-none text-[10px] font-black uppercase tracking-[0.25em] leading-relaxed"
               />
+            </div>
+
+            {/* Public Storefront Customization */}
+            <div className="pt-8 mt-4 border-t border-white/5 space-y-6">
+              <h4 className="text-xs font-black uppercase tracking-widest text-white/60 ml-2">Personalización de Tienda Pública</h4>
+              
+              <label className="flex items-center gap-4 cursor-pointer bg-white/5 p-6 rounded-[32px] border border-white/10 hover:bg-white/10 transition-colors">
+                <input 
+                  type="checkbox" 
+                  checked={form.isFavorite}
+                  onChange={e => setForm({...form, isFavorite: e.target.checked})}
+                  className="w-5 h-5 rounded bg-black border-white/20 text-emerald-500 focus:ring-emerald-500/20"
+                />
+                <span className="text-[10px] font-black text-white uppercase tracking-[0.25em]">Destacar en "Nuestras Favoritas"</span>
+              </label>
+
+              <div className="space-y-3">
+                <label className="block text-[10px] font-black uppercase tracking-[0.3em] text-white/60 ml-2">Destacar en "Encuentra tu Estilo"</label>
+                <select
+                  value={form.featuredStyle}
+                  onChange={e => setForm({...form, featuredStyle: e.target.value})}
+                  className="w-full bg-white/5 border border-white/10 rounded-[32px] px-8 py-5 text-white text-[10px] font-black uppercase tracking-[0.25em] focus:outline-none focus:bg-white/10 focus:border-white transition-all"
+                >
+                  <option value="" className="bg-black">Ninguno</option>
+                  <option value="OUTDOOR" className="bg-black">Outdoor</option>
+                  <option value="RUNNING" className="bg-black">Running</option>
+                  <option value="URBANO" className="bg-black">Urbano</option>
+                  <option value="FÚTBOL" className="bg-black">Fútbol</option>
+                  <option value="INDUSTRIAL" className="bg-black">Industrial</option>
+                </select>
+              </div>
             </div>
 
             <div className="flex gap-6 pt-6">

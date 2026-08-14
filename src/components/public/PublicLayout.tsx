@@ -25,16 +25,12 @@ export default function PublicLayout({ catalog, onShowAuth }: { catalog: any, on
 
       <PublicNavbar 
         currentView={currentPublicView} 
-        onViewChange={(view) => {
-          if (['calzado', 'ropa', 'accesorios'].includes(view)) {
+        currentCategory={initialCategory}
+        categories={catalog.data?.categories || []}
+        onViewChange={(view, payload) => {
+          if (view === 'catalog' && payload) {
             setCurrentPublicView('catalog');
-            // Professional mapping for navigation
-            const categoryMap: { [key: string]: string } = {
-              'calzado': 'CALZADO',
-              'ropa': 'ROPA',
-              'accesorios': 'ACCESORIOS'
-            };
-            setInitialCategory(categoryMap[view]);
+            setInitialCategory(payload);
           } else {
             setCurrentPublicView(view as any);
             if (view === 'catalog') setInitialCategory(null);
@@ -82,7 +78,7 @@ export default function PublicLayout({ catalog, onShowAuth }: { catalog: any, on
       {/* Footer Branding */}
       <div className="py-12 border-t border-white/5 bg-black/50 relative z-10">
         <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-8">
-          <p className="text-[8px] font-black uppercase tracking-[0.6em] text-white/20">Protocolo SATOSHIMPORT // Sistema v2.04 // Base.Local.Sync.2026</p>
+          <p className="text-[10px] font-black uppercase tracking-[0.4em] text-white/40">©J.M.R.L</p>
           
           <div className="flex items-center gap-8">
             <a href="https://t.me/+azjtpws9ov1kYjM5" target="_blank" rel="noreferrer" className="text-white/20 hover:text-white transition-colors">

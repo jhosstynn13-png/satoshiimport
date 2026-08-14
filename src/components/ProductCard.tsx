@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Edit2, Trash2, Box, Package, ShoppingCart } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Product } from '../types';
@@ -7,7 +7,7 @@ interface ProductCardProps {
   product: Product;
   onEdit: () => void;
   onDelete: () => void;
-  onAddToCart?: (p: Product) => void;
+  onAddToCart?: (p: Product, size?: string) => void;
   showControls?: boolean;
   isPublic?: boolean;
   catalog?: any;
@@ -21,6 +21,12 @@ const ProductCard: React.FC<ProductCardProps> = ({
   showControls = true, 
   isPublic = false 
 }) => {
+  const [selectedSize, setSelectedSize] = useState<string | null>(null);
+  
+  const displaySizes = isPublic && product.sizes && product.sizes.length > 0 
+    ? [...product.sizes, 'Otros'] 
+    : product.sizes || [];
+
   return (
     <motion.div
       layout
@@ -73,13 +79,23 @@ const ProductCard: React.FC<ProductCardProps> = ({
           
           {product.sizes && product.sizes.length > 0 && (
             <div className="flex flex-wrap gap-1 mt-2">
-              {product.sizes.map(size => (
-                <span key={size} className="px-1.5 py-0.5 bg-white/5 border border-white/5 rounded text-[8px] font-black text-white/50">{size}</span>
+              {displaySizes.map(size => (
+                <button 
+                  key={size}
+                  onClick={() => isPublic && setSelectedSize(size)}
+                  disabled={!isPublic}
+                  className={`px-1.5 py-0.5 border rounded text-[8px] font-black transition-all ${
+                    selectedSize === size 
+                      ? 'bg-white text-black border-white shadow-[0_0_10px_rgba(255,255,255,0.5)]' 
+                      : `bg-white/5 border-white/5 text-white/50 ${isPublic ? "hover:bg-white/20 hover:text-white cursor-pointer" : ""}`
+                  }`}
+                >
+                  {size}
+                </button>
               ))}
             </div>
           )}
         </div>
-
         <div className="mt-auto pt-4 border-t border-white/5 flex items-center justify-between">
           <div className="flex flex-col">
             <span className="text-[8px] font-bold text-white/40 uppercase tracking-widest leading-none mb-1">
@@ -89,10 +105,16 @@ const ProductCard: React.FC<ProductCardProps> = ({
               {isPublic ? '$' : 'S/'} {product.price.toLocaleString(undefined, { minimumFractionDigits: 0 })}
             </span>
           </div>
-
           {isPublic ? (
             <button 
-              onClick={() => onAddToCart?.(product)}
+              onClick={() => {
+                if (displaySizes.length > 0 && !selectedSize) {
+                  alert('Por favor selecciona una talla antes de añadir al carrito.');
+                  return;
+                }
+                onAddToCart?.(product, selectedSize || undefined);
+                setSelectedSize(null);
+              }}
               disabled={!onAddToCart}
               className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 cursor-pointer shadow-lg ${
                 onAddToCart 

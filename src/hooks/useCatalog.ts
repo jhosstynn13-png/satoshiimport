@@ -10,6 +10,7 @@ import customersData from '../data/customers.json';
 
 import { db } from '../firebase';
 import { doc, setDoc, onSnapshot } from 'firebase/firestore';
+import localforage from 'localforage';
 
 const STORAGE_KEY = "catalogo_pro_local_v3"; // Bumped version to force reset for user data as requested
 
@@ -112,6 +113,10 @@ export function useCatalog() {
       (!u.password || u.password === password)
     );
     if (user) {
+      if (user.status === 'suspended') {
+        addLog(`Intento de inicio de sesión de usuario suspendido: ${email}`, 'error');
+        return { success: false, message: 'Su cuenta ha sido suspendida por seguridad.' };
+      }
       setCurrentUser(user);
       localStorage.setItem(STORAGE_KEY + "_session", JSON.stringify(user));
       addLog(`Sesión iniciada: ${user.name} (${user.role.toUpperCase()})`, 'success');
@@ -128,6 +133,10 @@ export function useCatalog() {
     
     if (!user) {
       return { success: false, message: 'Credenciales incorrectas o identidad no encontrada.' };
+    }
+    
+    if (user.status === 'suspended') {
+      return { success: false, message: 'Su cuenta ha sido suspendida por seguridad.' };
     }
     
     if (password && user.password !== password) {
@@ -194,24 +203,15 @@ export function useCatalog() {
     _setData(prev => {
       const newData = typeof value === 'function' ? value(prev) : value;
       localStorage.setItem(STORAGE_KEY, JSON.stringify(newData));
-      setDoc(doc(db, "catalogs", "main"), JSON.parse(JSON.stringify(newData)));
+      // setDoc(doc(db, "catalogs", "main"), JSON.parse(JSON.stringify(newData))); // Disabled to avoid quota issues
       return newData;
     });
   };
 
   useEffect(() => {
-    const unsub = onSnapshot(doc(db, "catalogs", "main"), (snapshot) => {
-      if (snapshot.exists()) {
-        const remoteData = snapshot.data() as CatalogData;
-        if (!snapshot.metadata.hasPendingWrites) {
-          _setData(remoteData);
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(remoteData));
-        }
-      } else {
-        setDoc(doc(db, "catalogs", "main"), JSON.parse(JSON.stringify(data)));
-      }
-    });
-    return () => unsub();
+    // Firebase sync disabled temporarily to avoid quota limits
+    // const unsub = onSnapshot(doc(db, "catalogs", "main"), (snapshot) => { ... });
+    // return () => unsub();
   }, []);
 
   const [selectedSubmodelId, setSelectedSubmodelId] = useState<string | null>(
@@ -458,6 +458,42 @@ export function useCatalog() {
     }));
   };
 
+
+  const addProductsBulk = (submodelId: string, productsData: Omit<Product, 'id' | 'createdAt'>[]) => {
+    const newProducts = productsData.map(productData => ({
+      ...productData,
+      id: uid(),
+      createdAt: Date.now(),
+      sizes: productData.sizes || [],
+      status: productData.status || 'active'
+    }));
+
+    addLog(`Añadidos ${newProducts.length} productos masivamente`, 'success');
+
+    setData(prev => ({
+      ...prev,
+      categories: prev.categories.map(cat => ({
+        ...cat,
+        subcategories: cat.subcategories.map(sub => ({
+          ...sub,
+          models: sub.models.map(model => {
+            return {
+              ...model,
+              submodels: model.submodels.map(submodel => {
+                if (submodel.id === submodelId) {
+                  return {
+                    ...submodel,
+                    products: [...submodel.products, ...newProducts]
+                  };
+                }
+                return submodel;
+              })
+            };
+          })
+        }))
+      }))
+    }));
+  };
   const updateProduct = (submodelId: string, productId: string, productData: Partial<Product>) => {
     setData(prev => ({
       ...prev,
@@ -814,6 +850,7 @@ export function useCatalog() {
     addSubmodel,
     deleteSubmodel,
     addProduct,
+    addProductsBulk,
     updateProduct,
     deleteProduct,
     addOrder,

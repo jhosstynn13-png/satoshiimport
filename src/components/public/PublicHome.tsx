@@ -48,10 +48,16 @@ const STYLE_CATEGORIES = [
 ];
 
 export default function PublicHome({ onExplore, onProfileClick, onContact, products = [] }: { onExplore: () => void, onProfileClick: () => void, onContact: () => void, products?: any[] }) {
+
+  const getStyleImage = (styleName: string, defaultImage: string) => {
+    const p = products.find(p => p.featuredStyle === styleName);
+    return p?.image || defaultImage;
+  };
+
   const [currentSlide, setCurrentSlide] = useState(0);
 
   // Get some random featured products
-  const featuredProducts = products.filter(p => !p.name.includes('JORDAN 4')).slice(0, 4);
+  const featuredProducts = products.filter(p => p.isFavorite);
   const bestSellers = products.slice(0, 4);
 
   useEffect(() => {
@@ -152,7 +158,7 @@ export default function PublicHome({ onExplore, onProfileClick, onContact, produ
               whileHover={{ y: -10 }}
               className="relative aspect-[4/5] rounded-[32px] overflow-hidden group cursor-pointer border border-white/5"
             >
-              <img src={style.image} alt={style.name} className="absolute inset-0 w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700 group-hover:scale-110" />
+              <img src={getStyleImage(style.name, style.image)} alt={style.name} className="absolute inset-0 w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700 group-hover:scale-110" />
               <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/20" />
               <div className="absolute bottom-6 left-0 right-0 text-center">
                 <span className="bg-white text-black px-6 py-2 rounded-full text-[10px] font-black tracking-widest uppercase italic shadow-2xl group-hover:bg-yellow-400 group-hover:text-black transition-colors">
@@ -164,7 +170,9 @@ export default function PublicHome({ onExplore, onProfileClick, onContact, produ
         </div>
       </section>
 
+      
       {/* Featured Grid - "Nuestras Favoritas" Style */}
+      {featuredProducts.length > 0 && (
       <section className="max-w-7xl mx-auto px-6 py-24 bg-white/[0.01] rounded-[60px] border border-white/5">
         <div className="flex justify-between items-end mb-16">
           <div className="space-y-2">
@@ -177,80 +185,29 @@ export default function PublicHome({ onExplore, onProfileClick, onContact, produ
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-           {[
-             { title: "SNEAKERS ELITE", img: "https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a", discount: "-50%" },
-             { title: "NEW ARRIVALS", img: "https://images.unsplash.com/photo-1556906781-9a412961c28c", discount: "-10%" },
-             { title: "ACCESSORIES", img: "https://images.unsplash.com/photo-1595950653303-3467972fc008", discount: "-20%" }
-           ].map((item, i) => (
+           {featuredProducts.slice(0, 6).map((item: any, i: number) => (
              <motion.div 
                key={i}
                whileHover={{ scale: 0.98 }}
                className="relative h-[500px] rounded-[48px] overflow-hidden group cursor-pointer"
                onClick={onExplore}
              >
-                <img src={item.img} alt={item.title} className="absolute inset-0 w-full h-full object-cover grayscale transition-all duration-1000 group-hover:grayscale-0 group-hover:scale-110" />
+                <img src={item.image} alt={item.name} className="absolute inset-0 w-full h-full object-cover grayscale transition-all duration-1000 group-hover:grayscale-0 group-hover:scale-110" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
-                <div className="absolute top-8 right-8">
-                  <span className="w-12 h-12 rounded-full bg-red-600 flex items-center justify-center text-[10px] font-black text-white italic shadow-xl">{item.discount}</span>
-                </div>
+
                 <div className="absolute bottom-10 left-10 space-y-2">
-                  <h3 className="text-3xl font-black italic uppercase tracking-tighter">{item.title}</h3>
-                  <p className="text-white/40 text-[10px] font-black uppercase tracking-widest italic group-hover:text-white transition-colors">Explorar Colección</p>
+                  <h3 className="text-3xl font-black italic uppercase tracking-tighter truncate max-w-[80%]">{item.name}</h3>
+                  <div className="flex items-center gap-4 mt-2">
+                    <p className="text-white/80 font-black text-xl italic font-mono">$ {item.price.toLocaleString()}</p>
+                    <p className="text-white/40 text-[10px] font-black uppercase tracking-widest italic group-hover:text-white transition-colors">Explorar Colección</p>
+                  </div>
                 </div>
              </motion.div>
            ))}
         </div>
       </section>
-
-      {/* Featured Products Grid */}
-      {featuredProducts.length > 0 && (
-        <section className="max-w-7xl mx-auto px-6 py-12">
-          <div className="flex justify-between items-end mb-12">
-            <h2 className="text-3xl md:text-4xl font-black italic uppercase tracking-tighter">Nuestras Favoritas</h2>
-            <button onClick={onExplore} className="text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-white transition-colors">Ver Todo</button>
-          </div>
-          
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {featuredProducts.map((product: any) => (
-              <motion.div 
-                key={product.id}
-                whileHover={{ y: -10 }}
-                className="bg-white/[0.02] border border-white/5 rounded-[40px] overflow-hidden group p-6"
-              >
-                <div className="aspect-square rounded-[32px] overflow-hidden mb-6 relative">
-                  <img src={product.image} alt={product.name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
-                  <div className="absolute top-4 left-4">
-                    <span className="bg-red-600 text-white text-[8px] font-black italic px-3 py-1 rounded-full">-10%</span>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <p className="text-[9px] font-black text-white/30 uppercase tracking-widest">{product.category}</p>
-                  <h3 className="text-sm font-black uppercase italic tracking-tighter truncate">{product.name}</h3>
-                  <div className="flex justify-between items-center pt-4">
-                    <p className="text-lg font-black text-emerald-400 italic font-mono">$ {product.price.toLocaleString()}</p>
-                    <button onClick={onExplore} className="w-10 h-10 rounded-full bg-white text-black flex items-center justify-center hover:bg-yellow-400 transition-colors">
-                      <ShoppingCart size={16} />
-                    </button>
-                  </div>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </section>
       )}
 
-      {/* Giant Offer Banner */}
-      <section className="max-w-7xl mx-auto px-6">
-        <div className="relative h-[250px] rounded-[48px] overflow-hidden group cursor-pointer" onClick={onExplore}>
-           <div className="absolute inset-0 bg-blue-600 group-hover:bg-blue-500 transition-colors duration-700" />
-           <div className="absolute inset-0 flex flex-col items-center justify-center text-center space-y-4 px-6">
-             <h3 className="text-4xl md:text-5xl lg:text-6xl font-black italic uppercase tracking-tighter leading-none">DESDE 50% DSCTO. EN MILES DE ARTÍCULOS</h3>
-             <p className="text-xs md:text-sm font-black uppercase tracking-[0.3em] text-white/60">No te pierdas de nuestras mejores ofertas exclusivas</p>
-             <button className="mt-4 px-10 py-4 bg-white text-black rounded-full text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all">Ver Ofertas</button>
-           </div>
-           <div className="absolute -right-10 top-0 text-[200px] font-black italic text-white/5 select-none pointer-events-none rotate-12">SALE</div>
-        </div>
-      </section>
 
       {/* Brand Showcase */}
       <section className="relative py-24 bg-white/[0.01] overflow-hidden border-y border-white/5">
@@ -261,52 +218,6 @@ export default function PublicHome({ onExplore, onProfileClick, onContact, produ
                 <img src={brand.logo} alt={brand.name} className="h-12 w-auto object-contain brightness-0 invert" />
               </div>
             ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Shop By Gender Section */}
-      <section className="max-w-7xl mx-auto px-6 py-20">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 h-[600px]">
-           {[
-             { name: "HOMBRE", img: "https://images.unsplash.com/photo-1503342217505-b0a15ec3261c", bg: "bg-blue-600" },
-             { name: "MUJER", img: "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f", bg: "bg-emerald-500" },
-             { name: "NIÑO", img: "https://images.unsplash.com/photo-1519238263530-99bdd11df2ea", bg: "bg-yellow-400" }
-           ].map((gender, i) => (
-             <motion.div 
-               key={i}
-               whileHover={{ scale: 0.98 }}
-               className="relative rounded-[48px] overflow-hidden group cursor-pointer text-center"
-               onClick={onExplore}
-             >
-                <img src={gender.img} alt={gender.name} className="absolute inset-0 w-full h-full object-cover grayscale transition-transform duration-1000 group-hover:scale-110" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-80" />
-                <div className="absolute bottom-10 left-0 right-0">
-                  <span className="bg-white text-black px-12 py-3 rounded-full text-sm font-black tracking-[0.2em] italic shadow-2xl group-hover:bg-yellow-400 transition-colors">
-                    {gender.name}
-                  </span>
-                </div>
-             </motion.div>
-           ))}
-        </div>
-      </section>
-
-      {/* Support Section */}
-      <section className="max-w-7xl mx-auto px-6">
-        <div className="bg-white/[0.02] border border-white/5 p-16 rounded-[80px] flex flex-col justify-center items-center text-center gap-10 relative overflow-hidden group">
-          <div className="absolute -top-10 -right-10 text-[180px] font-black italic text-white/5 rotate-12 group-hover:rotate-0 transition-transform duration-700 select-none uppercase">Private</div>
-          <div className="relative z-10 space-y-6 flex flex-col items-center">
-            <div className="w-16 h-16 rounded-3xl bg-emerald-500/10 flex items-center justify-center text-emerald-400 border border-emerald-500/20 mb-4">
-               <Zap size={32} />
-            </div>
-            <h3 className="text-4xl md:text-6xl font-black italic uppercase tracking-wide">Atención Concierge</h3>
-            <p className="text-white/40 leading-relaxed italic text-lg max-w-2xl">Soporte técnico prioritario y acceso preferente a preventas exclusivas para socios permanentes.</p>
-            <button 
-              onClick={onContact}
-              className="px-14 py-6 bg-white text-black rounded-full text-[10px] font-black uppercase tracking-[0.4em] hover:scale-105 transition-all shadow-2xl italic"
-            >
-              Contactar Ahora
-            </button>
           </div>
         </div>
       </section>

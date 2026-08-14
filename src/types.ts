@@ -13,6 +13,8 @@ export interface Product {
   createdAt: number;
   sizes: string[];
   status: 'active' | 'discontinued';
+  isFavorite?: boolean;
+  featuredStyle?: string;
 }
 
 export interface Submodel {
@@ -110,6 +112,7 @@ export interface User {
   role: UserRole;
   createdAt: number;
   lastLogin?: number;
+  status?: 'active' | 'suspended';
 }
 
 export type View = 'dashboard' | 'catalog' | 'orders' | 'customers' | 'bulk' | 'backup' | 'settings' | 'users';
