@@ -15,7 +15,7 @@ export default function PublicLayout({ catalog, onShowAuth }: { catalog: any, on
   const { currentUser, allProducts } = catalog;
 
   const isPublicDisabled = catalog.data?.storeSettings?.publicAccessEnabled === false;
-  const isAdmin = currentUser?.role === 'admin';
+  const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'superadmin';
 
   if (isPublicDisabled && !isAdmin) {
     return (

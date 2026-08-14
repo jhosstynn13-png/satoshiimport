@@ -57,8 +57,8 @@ export default function Catalog({ catalog, searchQuery }: CatalogProps) {
     currentUser
   } = catalog;
 
-  const isStaff = currentUser?.role === 'admin';
-  const isAdmin = currentUser?.role === 'admin';
+  const isStaff = currentUser?.role === 'admin' || currentUser?.role === 'superadmin';
+  const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'superadmin';
 
   const [newCatName, setNewCatName] = useState('');
   const [newSubName, setNewSubName] = useState('');

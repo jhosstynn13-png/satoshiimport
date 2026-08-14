@@ -728,7 +728,7 @@ export function useCatalog() {
       categories: [],
       orders: [],
       customers: [],
-      users: prev.users.filter(u => u.role === 'admin')
+      users: prev.users.filter(u => u.role === 'admin' || u.role === 'superadmin')
     }));
     setSelectedCategoryId(null);
     setSelectedSubcategoryId(null);

@@ -6,7 +6,7 @@ import { Order, OrderStatus, PaymentMethod, BillingType } from '../types';
 export default function Orders({ catalog, searchQuery = '' }: { catalog: any, searchQuery?: string }) {
   const { data, updateOrder, deleteOrder, currentUser } = catalog;
   const orders = data.orders || [];
-  const isAdmin = currentUser?.role === 'admin';
+  const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'superadmin';
   const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set());
   const [confirmDeleteOrderId, setConfirmDeleteOrderId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<OrderStatus | 'all'>('all');

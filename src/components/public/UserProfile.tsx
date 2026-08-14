@@ -96,7 +96,7 @@ export default function UserProfile({ catalog }: { catalog: any }) {
                         </div>
                         <div className="flex items-center gap-2 text-white/50 text-[10px] font-bold uppercase tracking-widest">
                           <Shield size={12} />
-                          <span>{currentUser.role === 'admin' ? 'Administrador' : 'Socio SATOSHIMPORT'}</span>
+                          <span>{currentUser.role === 'admin' || currentUser.role === 'superadmin' ? 'Administrador' : 'Socio SATOSHIMPORT'}</span>
                         </div>
                       </div>
                     </div>
