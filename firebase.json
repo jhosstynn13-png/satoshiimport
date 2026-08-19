@@ -1,0 +1,6 @@
+{
+  "firestore": {
+    "database": "ai-studio-satoshimport-f593be52-3488-4af0-ab91-831b1d7c15fc",
+    "rules": "firestore.rules"
+  }
+}

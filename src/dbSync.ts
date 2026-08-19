@@ -111,11 +111,11 @@ export const massiveSyncToDb = async (data: CatalogData) => {
   
   // Note: Firestore batch has a 500 limit. For demo data, it's fine.
   // For 7500 real products, this would need chunks.
-  const allProducts = data.categories.flatMap(c => 
-    c.subcategories.flatMap(s => 
-      s.models.flatMap(m => 
-        m.submodels.flatMap(sm => 
-          sm.products.map(p => ({ ...p, categoryId: c.id, subcategoryId: s.id, modelId: m.id, submodelId: sm.id }))
+  const allProducts = (data.categories || []).flatMap(c => 
+    (c.subcategories || []).flatMap(s => 
+      (s.models || []).flatMap(m => 
+        (m.submodels || []).flatMap(sm => 
+          (sm.products || []).map(p => ({ ...p, categoryId: c.id, subcategoryId: s.id, modelId: m.id, submodelId: sm.id }))
         )
       )
     )

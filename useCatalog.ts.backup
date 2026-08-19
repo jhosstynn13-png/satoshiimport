@@ -138,14 +138,6 @@ export function useCatalog() {
   }, [currentUser, activeUser]);
 
   
-  const [isDbLoaded, setIsDbLoaded] = useState(false);
-
-  useEffect(() => {
-    if (isDbLoaded && data.categories.length > 0) {
-      saveCategoriesToDb(data.categories, data.storeSettings).catch(console.error);
-    }
-  }, [data.categories, data.storeSettings, isDbLoaded]);
-
   useEffect(() => {
     const initDb = async () => {
       addLog('Conectando a Firebase Cloud (Firestore)...', 'process');
@@ -161,7 +153,6 @@ export function useCatalog() {
            massiveSyncToDb(data).catch(console.error);
         }
       }
-      setIsDbLoaded(true);
     };
     initDb();
   }, []);
@@ -176,7 +167,17 @@ export function useCatalog() {
       if (user.status === 'suspended') {
         addLog(`Intento de inicio de sesión de usuario suspendido: ${email}`, 'error');
         
-        return { success: false, message: 'Su cuenta ha sido suspendida por seguridad.' };
+  // Sync structural changes to DB whenever categories array changes length or structure
+  // (We debounce this slightly by using a useMemo/useEffect combo, or just direct useEffect)
+  useEffect(() => {
+    // Only save if we actually have data loaded from DB (prevents overwriting on first boot before load)
+    if (data.categories.length > 0) {
+      // NOTE: saveCategoriesToDb strips products, so it's safe to pass data.categories
+      saveCategoriesToDb(data.categories, data.storeSettings).catch(console.error);
+    }
+  }, [data.categories, data.storeSettings]);
+
+  return { success: false, message: 'Su cuenta ha sido suspendida por seguridad.' };
       }
       
       if (user.role === 'client' && (data.storeSettings?.clientLoginEnabled === false || data.storeSettings?.publicAccessEnabled === false)) {
@@ -251,8 +252,12 @@ export function useCatalog() {
     };
     
     
-
-    saveUserToDb(newUser).catch(console.error);
+    const cat = data.categories.find(c => c.subcategories.some(s => s.models.some(m => m.submodels.some(sm => sm.id === submodelId))));
+    const sub = cat?.subcategories.find(s => s.models.some(m => m.submodels.some(sm => sm.id === submodelId)));
+    const mod = sub?.models.find(m => m.submodels.some(sm => sm.id === submodelId));
+    if(cat && sub && mod) {
+       saveProductToDb(newProduct, cat.id, sub.id, mod.id, submodelId).catch(console.error);
+    }
     setData(prev => ({
       ...prev,
       users: [...prev.users, newUser]
@@ -719,7 +724,7 @@ export function useCatalog() {
   const importCsv = (text: string) => {
     const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
     let imported = 0;
-    const newData = JSON.parse(JSON.stringify(data));
+    const newData = { ...data };
 
     lines.forEach(line => {
       const parts = parseCsvLine(line);
@@ -741,23 +746,11 @@ export function useCatalog() {
       // Ensure a model exists (we'll name it GENERAL if not specified or just use first one)
       let model = sub.models.find(m => m.name === 'GENERAL');
       if (!model) {
-        model = { id: uid(), name: 'GENERAL', submodels: [] };
+        model = { id: uid(), name: 'GENERAL', products: [] };
         sub.models.push(model);
       }
-      
-      
-      if (!model.submodels) model.submodels = [];
-      let submodel = model.submodels.find(sm => sm.name === 'ESTÁNDAR');
-  
-      if (!submodel) {
-         submodel = { id: uid(), name: 'ESTÁNDAR', products: [] };
-         model.submodels.push(submodel);
-      }
 
-      
-      if (!submodel.products) submodel.products = [];
-      submodel.products.push({
-  
+      model.products.push({
         id: uid(),
         name: name.trim(),
         price: Number(price),
