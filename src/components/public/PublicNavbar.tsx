@@ -11,9 +11,10 @@ interface PublicNavbarProps {
   onLoginClick: () => void;
   onProfileClick: () => void;
   currentUser: any;
+  logo?: string;
 }
 
-export default function PublicNavbar({ currentView, currentCategory, categories = [], onViewChange, onLoginClick, onProfileClick, currentUser }: PublicNavbarProps) {
+export default function PublicNavbar({ currentView, currentCategory, categories = [], onViewChange, onLoginClick, onProfileClick, currentUser , logo}: PublicNavbarProps) {
   const { totalItems, totalPrice } = useCart();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -36,7 +37,7 @@ export default function PublicNavbar({ currentView, currentCategory, categories 
         {/* Logo High-Contrast */}
         <div className="bg-white text-black font-black text-lg w-10 h-10 flex items-center justify-center rounded-[12px] transition-all duration-700 group-hover:scale-105 overflow-hidden p-1">
           <img 
-            src="https://yimuttzzvijmvlxqleor.supabase.co/storage/v1/object/public/productos/LOGO_SECO%20(1).png" 
+            src={logo || "https://yimuttzzvijmvlxqleor.supabase.co/storage/v1/object/public/productos/LOGO_SECO%20(1).png"} 
             alt="Logo Satoshimport" 
             className="w-full h-full object-contain"
           />

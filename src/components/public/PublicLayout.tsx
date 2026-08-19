@@ -76,6 +76,7 @@ export default function PublicLayout({ catalog, onShowAuth }: { catalog: any, on
       </div>
 
       <PublicNavbar 
+        logo={catalog.data?.storeSettings?.logo}
         currentView={currentPublicView} 
         currentCategory={initialCategory}
         categories={catalog.data?.categories || []}
